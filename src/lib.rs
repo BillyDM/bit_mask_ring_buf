@@ -67,7 +67,6 @@ pub fn next_pow_of_2(n: usize) -> usize {
         return 2;
     }
 
-    // algorithm by wrl#0828 on Discord
     let shift = usize::MAX
         .count_ones()
         .saturating_sub((n - 1).leading_zeros());
@@ -478,6 +477,8 @@ mod tests {
         assert_eq!(next_pow_of_2(129), 256);
         assert_eq!(next_pow_of_2(4000), 4096);
         assert_eq!(next_pow_of_2(5000), 8192);
+        assert_eq!(next_pow_of_2(std::usize::MAX/2), (std::usize::MAX/2)+1);
+        assert_eq!(next_pow_of_2((std::usize::MAX/2)+1), (std::usize::MAX/2)+1);
     }
 
     #[test]
