@@ -62,11 +62,16 @@ pub use referenced::BitMaskRingBufRef;
 
 /// Returns the next highest power of 2 if `n` is not already a power of 2.
 /// This will return `2` if `n < 2`.
+///
+/// # Panics
+///
+/// * This will panic if n > (std::usize::MAX/2)+1
 pub fn next_pow_of_2(n: usize) -> usize {
     if n < 2 {
         return 2;
     }
 
+    // algorithm by wrl#0828 on Discord
     let shift = usize::MAX
         .count_ones()
         .saturating_sub((n - 1).leading_zeros());
