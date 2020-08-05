@@ -60,30 +60,18 @@
 mod referenced;
 pub use referenced::BitMaskRingBufRef;
 
-
 /// Returns the next highest power of 2 if `n` is not already a power of 2.
-/// This will return `2` if `n` = 0 or `n` = 1.
+/// This will return `2` if `n < 2`.
 pub fn next_pow_of_2(n: usize) -> usize {
-    if n == 0 {
+    if n < 2 {
         return 2;
     }
 
-    // algorithm from https://www.techiedelight.com/round-next-highest-power-2/
-
-    // decrement n (to handle the case when n itself is a power of 2)
-    let mut n = n - 1;
-
-    // initialize result to 2
-    let mut res: usize = 2;
-
-    // double res and divide n in half till it becomes 0
-    n >>= 1; // half n
-    while n != 0 {
-        res <<= 1; // doube res
-        n >>= 1; // half n
-    }
-
-    res
+    // algorithm by wrl#0828 on Discord
+    let shift = usize::MAX
+        .count_ones()
+        .saturating_sub((n - 1).leading_zeros());
+    1usize << shift
 }
 
 static MS_TO_SEC_RATIO: f64 = 1.0 / 1000.0;
