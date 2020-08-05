@@ -257,7 +257,10 @@ impl<T: Copy + Clone + Default> BitMaskRingBuf<T> {
         unsafe {
             let self_vec_ptr = self.vec.as_mut_ptr();
             (
-                &mut *std::ptr::slice_from_raw_parts_mut(self_vec_ptr.add(start), self.vec.len() - start),
+                &mut *std::ptr::slice_from_raw_parts_mut(
+                    self_vec_ptr.add(start),
+                    self.vec.len() - start,
+                ),
                 &mut *std::ptr::slice_from_raw_parts_mut(self_vec_ptr, start),
             )
         }
@@ -294,7 +297,10 @@ impl<T: Copy + Clone + Default> BitMaskRingBuf<T> {
             if len > first_portion_len {
                 let second_portion_len = std::cmp::min(len - first_portion_len, start);
                 (
-                    &mut *std::ptr::slice_from_raw_parts_mut(self_vec_ptr.add(start), first_portion_len),
+                    &mut *std::ptr::slice_from_raw_parts_mut(
+                        self_vec_ptr.add(start),
+                        first_portion_len,
+                    ),
                     &mut *std::ptr::slice_from_raw_parts_mut(self_vec_ptr, second_portion_len),
                 )
             } else {
@@ -338,7 +344,11 @@ impl<T: Copy + Clone + Default> BitMaskRingBuf<T> {
             let first_portion_len = self.vec.len() - start;
             while slice_len > first_portion_len {
                 // Copy first portion
-                std::ptr::copy_nonoverlapping(self_vec_ptr.add(start), slice_ptr, first_portion_len);
+                std::ptr::copy_nonoverlapping(
+                    self_vec_ptr.add(start),
+                    slice_ptr,
+                    first_portion_len,
+                );
                 slice_ptr = slice_ptr.add(first_portion_len);
                 slice_len -= first_portion_len;
 
@@ -352,8 +362,6 @@ impl<T: Copy + Clone + Default> BitMaskRingBuf<T> {
             // Copy any elements remaining from start up to the end of self.vec
             std::ptr::copy_nonoverlapping(self_vec_ptr.add(start), slice_ptr, slice_len);
         }
-
-        
     }
 
     /// Copies data from the given slice into the ring buffer starting from
@@ -394,10 +402,18 @@ impl<T: Copy + Clone + Default> BitMaskRingBuf<T> {
             // first portion, then wrap to the beginning and copy the remaining second portion.
             if start_i + slice.len() > self.vec.len() {
                 let first_portion_len = self.vec.len() - start_i;
-                std::ptr::copy_nonoverlapping(slice_ptr, self_vec_ptr.add(start_i), first_portion_len);
+                std::ptr::copy_nonoverlapping(
+                    slice_ptr,
+                    self_vec_ptr.add(start_i),
+                    first_portion_len,
+                );
 
                 let second_portion_len = slice.len() - first_portion_len;
-                std::ptr::copy_nonoverlapping(slice_ptr.add(first_portion_len), self_vec_ptr, second_portion_len);
+                std::ptr::copy_nonoverlapping(
+                    slice_ptr.add(first_portion_len),
+                    self_vec_ptr,
+                    second_portion_len,
+                );
             } else {
                 // Otherwise, data fits so just copy it
                 std::ptr::copy_nonoverlapping(slice_ptr, self_vec_ptr.add(start_i), slice.len());
