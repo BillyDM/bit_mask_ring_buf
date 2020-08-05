@@ -8,6 +8,7 @@ categories = ["data-structures"]
 edition = "2018"
 description = "A fast ring buffer implementation with cheap and safe indexing"
 repository = "https://github.com/BillyDM/bit_mask_ring_buf"
+documentation = "https://docs.rs/bit_mask_ring_buf"
 readme = "README.md"
 
 [badges]
