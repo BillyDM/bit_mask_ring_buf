@@ -1,6 +1,6 @@
 [package]
 name = "bit_mask_ring_buf"
-version = "0.1.3"
+version = "0.1.4"
 authors = ["Billy Messenger <https://github.com/BillyDM>"]
 license = "MIT"
 keywords = ["ring", "circular", "buffer", "dsp"]

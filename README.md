@@ -1,4 +1,4 @@
-# bit_mask_ring_buf
+# Bit-Masking Ring Buffer
 [![Documentation](https://docs.rs/bit_mask_ring_buf/badge.svg)][documentation]
 [![Crates.io](https://img.shields.io/crates/v/bit_mask_ring_buf.svg)](https://crates.io/crates/bit_mask_ring_buf)
 [![License](https://img.shields.io/crates/l/bit_mask_ring_buf.svg)](https://github.com/BillyDM/bit_mask_ring_buf/blob/master/LICENSE)
@@ -11,7 +11,7 @@ Note, this crate has not been tested in a production environment yet. If you fin
 
 ## Example
 ```rust
-use bit_mask_ring_buf::BitMaskRingBuf;
+use bit_mask_ring_buf::{BitMaskRingBuf, BitMaskRingBufRef};
 
 // Create a ring buffer with type u32. The data will be initialized with the default
 // value (0 in this case). The actual capacity will be set to the next highest power
@@ -46,6 +46,15 @@ assert_eq!(rb[3], 4);
 let (s1, s2) = rb.as_slices_len(1, 4);
 assert_eq!(s1, &[2, 3, 4]);
 assert_eq!(s2, &[1]);
+
+// aligned/stack data may also be used
+let mut stack_data = [0u32, 1, 2, 3];
+let mut rb_ref = BitMaskRingBufRef::new(&mut stack_data);
+rb_ref[-4] = 5;
+assert_eq!(rb_ref[0], 5);
+assert_eq!(rb_ref[1], 1);
+assert_eq!(rb_ref[2], 2);
+assert_eq!(rb_ref[3], 3);
 ```
 
 [documentation]: https://docs.rs/bit_mask_ring_buf/
