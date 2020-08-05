@@ -7,7 +7,7 @@ A fast ring buffer implementation with cheap and safe indexing written in Rust. 
 
 This crate has no consumer/producer logic, and is meant to be used as a raw data structure or a base for other data structures.
 
-Note, this crate has not been tested in a production environment yet and should not be relied on for mission-critical or security tasks. If you find any bugs, please let me know!
+Note, this crate has not been tested in a production environment yet and should not be relied on for mission-critical or security tasks yet. If you find any bugs, please let me know!
 
 ## Example
 ```rust
