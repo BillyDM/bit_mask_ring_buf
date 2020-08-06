@@ -13,9 +13,11 @@
 //! ```rust
 //! use bit_mask_ring_buf::{BitMaskRingBuf, BitMaskRingBufRef};
 //!
-//! // Create a ring buffer with type u32. The data will be initialized with the default
-//! // value (0 in this case). The actual capacity will be set to the next highest power
-//! // of 2 if the given capacity is not already a power of 2.
+//! // Create a ring buffer with type u32. The data will be
+//! // initialized with the default value (0 in this case).
+//! // The actual capacity will be set to the next highest
+//! // power of 2 if the given capacity is not already
+//! // a power of 2.
 //! let mut rb = BitMaskRingBuf::<u32>::from_capacity(3);
 //! assert_eq!(rb.capacity(), 4);
 //!
