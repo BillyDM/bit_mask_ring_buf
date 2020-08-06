@@ -9,7 +9,7 @@
 /// [`BitMaskRingBuf`]: ../struct.BitMaskRingBuf.html
 #[allow(missing_debug_implementations)]
 pub struct BitMaskRingBufRef<'a, T: Copy + Clone + Default> {
-    data: &'a mut[T],
+    data: &'a mut [T],
     mask: isize,
 }
 
@@ -27,15 +27,12 @@ impl<'a, T: Copy + Clone + Default> BitMaskRingBufRef<'a, T> {
     /// was not initialized first.
     ///
     /// [`BitMaskRingBufRef`]: struct.BitMaskRingBufRef.html
-    pub fn new(slice: &'a mut[T]) -> Self {
+    pub fn new(slice: &'a mut [T]) -> Self {
         assert_eq!(slice.len(), crate::next_pow_of_2(slice.len()));
 
         let mask = (slice.len() as isize) - 1;
 
-        Self {
-            data: slice,
-            mask,
-        }
+        Self { data: slice, mask }
     }
 
     /// Clears all values in the ring buffer to the default value.
