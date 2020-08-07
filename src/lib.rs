@@ -7,36 +7,33 @@
 //! This crate has no consumer/producer logic, and is meant to be used as a raw data structure
 //! or a base for other data structures.
 //!
-//! Note, this crate has not been tested in a production environment yet. If you find any bugs,
-//! especially ones pertaining to memory safety, please let me know!
-//!
 //! ```rust
-//! use bit_mask_ring_buf::{BitMaskRingBuf, BitMaskRingBufRef};
+//! use bit_mask_ring_buf::{BMRingBuf, BMRingBufRef};
 //!
 //! // Create a ring buffer with type u32. The data will be
 //! // initialized with the default value (0 in this case).
 //! // The actual capacity will be set to the next highest
 //! // power of 2 if the given capacity is not already
 //! // a power of 2.
-//! let mut rb = BitMaskRingBuf::<u32>::from_capacity(3);
+//! let mut rb = BMRingBuf::<u32>::from_capacity(3);
 //! assert_eq!(rb.capacity(), 4);
 //!
-//! // read/write to buffer by indexing
+//! // Read/write to buffer by indexing
 //! rb[0] = 0;
 //! rb[1] = 1;
 //! rb[2] = 2;
 //! rb[3] = 3;
 //!
-//! // cheaply wrap when reading/writing outside of bounds
+//! // Cheaply wrap when reading/writing outside of bounds
 //! assert_eq!(rb[-1], 3);
 //! assert_eq!(rb[10], 2);
 //!
-//! // memcpy into slices at arbitrary points and length
+//! // Memcpy into slices at arbitrary points and length
 //! let mut read_buffer = [0u32; 7];
 //! rb.read_into(&mut read_buffer, 2);
 //! assert_eq!(read_buffer, [2, 3, 0, 1, 2, 3, 0]);
 //!
-//! // memcpy data from a slice into the ring buffer. Only
+//! // Memcpy data from a slice into the ring buffer. Only
 //! // the latest data will be copied.
 //! rb.write_latest(&[0, 2, 3, 4, 1], 0);
 //! assert_eq!(rb[0], 1);
@@ -44,14 +41,14 @@
 //! assert_eq!(rb[2], 3);
 //! assert_eq!(rb[3], 4);
 //!
-//! // read/write by retreiving slices directly
+//! // Read/write by retrieving slices directly
 //! let (s1, s2) = rb.as_slices_len(1, 4);
 //! assert_eq!(s1, &[2, 3, 4]);
 //! assert_eq!(s2, &[1]);
 //!
-//! // aligned/stack data may also be used
+//! // Aligned/stack data may also be used
 //! let mut stack_data = [0u32, 1, 2, 3];
-//! let mut rb_ref = BitMaskRingBufRef::new(&mut stack_data);
+//! let mut rb_ref = BMRingBufRef::new(&mut stack_data);
 //! rb_ref[-4] = 5;
 //! assert_eq!(rb_ref[0], 5);
 //! assert_eq!(rb_ref[1], 1);
@@ -60,7 +57,7 @@
 //! ```
 
 mod referenced;
-pub use referenced::BitMaskRingBufRef;
+pub use referenced::BMRingBufRef;
 
 /// Returns the next highest power of 2 if `n` is not already a power of 2.
 /// This will return `2` if `n < 2`.
@@ -87,19 +84,25 @@ static MS_TO_SEC_RATIO: f64 = 1.0 / 1000.0;
 /// is a power of 2. This is best used when indexing the buffer with an `isize` value.
 /// Copies/reads with slices are implemented with memcpy.
 #[allow(missing_debug_implementations)]
-pub struct BitMaskRingBuf<T: Copy + Clone + Default> {
+pub struct BMRingBuf<T: Copy + Clone + Default> {
     vec: Vec<T>,
     mask: isize,
 }
 
-impl<T: Copy + Clone + Default> BitMaskRingBuf<T> {
-    /// Creates a new [`BitMaskRingBuf`] with a capacity that is at least the given
+impl<T: Copy + Clone + Default> BMRingBuf<T> {
+    /// Creates a new [`BMRingBuf`] with a capacity that is at least the given
     /// capacity. The buffer will be initialized with the default value.
     ///
     /// * `capacity` - The capacity of the ring buffer. The actual capacity will be set
     /// to the next highest power of 2 if `capacity` is not already a power of 2.
+    /// Capacity will be set to 2 if `capacity < 2`.
     ///
-    /// [`BitMaskRingBuf`]: struct.BitMaskRingBuf.html
+    /// # Panics
+    ///
+    /// * This will panic if this tries to allocate more than `isize::MAX` bytes
+    /// * This will panic if `capacity > (std::usize::MAX/2)+1`
+    ///
+    /// [`BMRingBuf`]: struct.BMRingBuf.html
     pub fn from_capacity(capacity: usize) -> Self {
         let mut new_self = Self {
             vec: Vec::new(),
@@ -111,18 +114,22 @@ impl<T: Copy + Clone + Default> BitMaskRingBuf<T> {
         new_self
     }
 
-    /// Creates a new [`BitMaskRingBuf`] with a capacity that holds at least a number of
+    /// Creates a new [`BMRingBuf`] with a capacity that holds at least a number of
     /// frames/samples in a given time peroid. The actual capacity will be set to the
     /// lowest power of 2 that can hold that many values.
     /// The buffer will be initialized with the default value.
+    /// The capacity will be set to 2 if the resulting capacity is less than 2.
     ///
-    /// * `milliseconds` - The time period in milliseconds.
-    /// * `sample_rate` - The sample rate in samples per second.
+    /// * `milliseconds` - The time period in milliseconds
+    /// * `sample_rate` - The sample rate in samples per second
     ///
-    /// ## Panics
-    /// * This will panic if either `milliseconds` or `sample_rate` is less than 0.
+    /// # Panics
     ///
-    /// [`BitMaskRingBuf`]: struct.BitMaskRingBuf.html
+    /// * This will panic if either `milliseconds` or `sample_rate` is less than 0
+    /// * This will panic if this tries to allocate more than `isize::MAX` bytes
+    /// * This will panic if the resulting capacity is greater than `(std::usize::MAX/2)+1`
+    ///
+    /// [`BMRingBuf`]: struct.BMRingBuf.html
     pub fn from_ms(milliseconds: f64, sample_rate: f64) -> Self {
         let mut new_self = Self {
             vec: Vec::new(),
@@ -137,24 +144,34 @@ impl<T: Copy + Clone + Default> BitMaskRingBuf<T> {
     /// Sets the capacity of the ring buffer. The actual capacity will be set
     /// to the next highest power of 2 if `capacity` is not already a power of 2.
     /// This will also clear all values to the default value.
+    /// The capacity will be set to 2 if `capacity < 2`.
+    ///
+    /// # Panics
+    ///
+    /// * This will panic if this tries to allocate more than `isize::MAX` bytes
+    /// * This will panic if `capacity > (std::usize::MAX/2)+1`
     pub fn set_capacity(&mut self, capacity: usize) {
         self.vec.clear();
         self.vec.resize(next_pow_of_2(capacity), Default::default());
         self.mask = (self.vec.len() as isize) - 1;
     }
 
-    /// Creates a new [`BitMaskRingBuf`] with a capacity that holds at least a number of
+    /// Creates a new [`BMRingBuf`] with a capacity that holds at least a number of
     /// frames/samples in a given time peroid. The actual capacity will be set to the
     /// lowest power of 2 that can hold that many values.
     /// This will also clear all values to the default value.
+    /// The capacity will be set to 2 if the resulting capacity is less than 2.
     ///
-    /// * `milliseconds` - The time period in milliseconds.
-    /// * `sample_rate` - The sample rate in samples per second.
+    /// * `milliseconds` - The time period in milliseconds
+    /// * `sample_rate` - The sample rate in samples per second
     ///
-    /// ## Panics
-    /// * This will panic if either `milliseconds` or `sample_rate` is less than 0.
+    /// # Panics
     ///
-    /// [`BitMaskRingBuf`]: struct.BitMaskRingBuf.html
+    /// * This will panic if either `milliseconds` or `sample_rate` is less than 0
+    /// * This will panic if this tries to allocate more than `isize::MAX` bytes
+    /// * This will panic if the resulting capacity is greater than `(std::usize::MAX/2)+1`
+    ///
+    /// [`BMRingBuf`]: struct.BMRingBuf.html
     pub fn set_capacity_from_ms(&mut self, milliseconds: f64, sample_rate: f64) {
         assert!(milliseconds >= 0.0);
         assert!(sample_rate >= 0.0);
@@ -172,7 +189,7 @@ impl<T: Copy + Clone + Default> BitMaskRingBuf<T> {
     /// Returns two slices that contain the all the data in the ring buffer
     /// starting at the index `start`.
     ///
-    /// ## Returns
+    /// # Returns
     ///
     /// * The first slice is the starting chunk of data. This will never be empty.
     /// * The second slice is the second contiguous chunk of data. This may
@@ -186,7 +203,7 @@ impl<T: Copy + Clone + Default> BitMaskRingBuf<T> {
         //
         // Both the length of self.vec and the value of self.mask are only modified
         // in self.set_capacity(). This function makes sure these values are valid.
-        // The constructors also correctly calls this function.
+        // The constructors also correctly call this function.
         //
         // Memory is created and initialized by a Vec, so it is always valid.
         unsafe {
@@ -205,7 +222,7 @@ impl<T: Copy + Clone + Default> BitMaskRingBuf<T> {
     /// * `len` - The length of data to read. If `len` is greater than the
     /// capacity of the ring buffer, then that capacity will be used instead.
     ///
-    /// ## Returns
+    /// # Returns
     ///
     /// * The first slice is the starting chunk of data.
     /// * The second slice is the second contiguous chunk of data. This may
@@ -219,7 +236,7 @@ impl<T: Copy + Clone + Default> BitMaskRingBuf<T> {
         //
         // Both the length of self.vec and the value of self.mask are only modified
         // in self.set_capacity(). This function makes sure these values are valid.
-        // The constructors also correctly calls this function.
+        // The constructors also correctly call this function.
         //
         // Memory is created and initialized by a Vec, so it is always valid.
         unsafe {
@@ -244,7 +261,7 @@ impl<T: Copy + Clone + Default> BitMaskRingBuf<T> {
     /// Returns two mutable slices that contain the all the data in the ring buffer
     /// starting at the index `start`.
     ///
-    /// ## Returns
+    /// # Returns
     ///
     /// * The first slice is the starting chunk of data. This will never be empty.
     /// * The second slice is the second contiguous chunk of data. This may
@@ -258,7 +275,7 @@ impl<T: Copy + Clone + Default> BitMaskRingBuf<T> {
         //
         // Both the length of self.vec and the value of self.mask are only modified
         // in self.set_capacity(). This function makes sure these values are valid.
-        // The constructors also correctly calls this function.
+        // The constructors also correctly call this function.
         //
         // Memory is created and initialized by a Vec, so it is always valid.
         unsafe {
@@ -280,7 +297,7 @@ impl<T: Copy + Clone + Default> BitMaskRingBuf<T> {
     /// * `len` - The length of data to read. If `len` is greater than the
     /// capacity of the ring buffer, then that capacity will be used instead.
     ///
-    /// ## Returns
+    /// # Returns
     ///
     /// * The first slice is the starting chunk of data.
     /// * The second slice is the second contiguous chunk of data. This may
@@ -294,7 +311,7 @@ impl<T: Copy + Clone + Default> BitMaskRingBuf<T> {
         //
         // Both the length of self.vec and the value of self.mask are only modified
         // in self.set_capacity(). This function makes sure these values are valid.
-        // The constructors also correctly calls this function.
+        // The constructors also correctly call this function.
         //
         // Memory is created and initialized by a Vec, so it is always valid.
         unsafe {
@@ -334,7 +351,7 @@ impl<T: Copy + Clone + Default> BitMaskRingBuf<T> {
         //
         // Both the length of self.vec and the value of self.mask are only modified
         // in self.set_capacity(). This function makes sure these values are valid.
-        // The constructors also correctly calls this function.
+        // The constructors also correctly call this function.
         //
         // Memory is created and initialized by a Vec, so it is always valid.
         //
@@ -395,7 +412,7 @@ impl<T: Copy + Clone + Default> BitMaskRingBuf<T> {
         //
         // Both the length of self.vec and the value of self.mask are only modified
         // in self.set_capacity(). This function makes sure these values are valid.
-        // The constructors also correctly calls this function.
+        // The constructors also correctly call this function.
         //
         // Memory is created and initialized by a Vec, so it is always valid.
         //
@@ -441,7 +458,7 @@ impl<T: Copy + Clone + Default> BitMaskRingBuf<T> {
     }
 }
 
-impl<T: Copy + Clone + Default> std::ops::Index<isize> for BitMaskRingBuf<T> {
+impl<T: Copy + Clone + Default> std::ops::Index<isize> for BMRingBuf<T> {
     type Output = T;
     fn index(&self, i: isize) -> &T {
         // Safe because of the algorithm of bit-masking the index on an array/vec
@@ -456,7 +473,7 @@ impl<T: Copy + Clone + Default> std::ops::Index<isize> for BitMaskRingBuf<T> {
     }
 }
 
-impl<T: Copy + Clone + Default> std::ops::IndexMut<isize> for BitMaskRingBuf<T> {
+impl<T: Copy + Clone + Default> std::ops::IndexMut<isize> for BMRingBuf<T> {
     fn index_mut(&mut self, i: isize) -> &mut T {
         // Safe because of the algorithm of bit-masking the index on an array/vec
         // whose length is a power of 2.
@@ -496,14 +513,14 @@ mod tests {
 
     #[test]
     fn bit_mask_ring_buf_initialize() {
-        let ring_buf = BitMaskRingBuf::<f32>::from_capacity(4);
+        let ring_buf = BMRingBuf::<f32>::from_capacity(4);
 
         assert_eq!(&ring_buf.vec[..], &[0.0, 0.0, 0.0, 0.0]);
     }
 
     #[test]
     fn bit_mask_ring_buf_constrain() {
-        let ring_buf = BitMaskRingBuf::<f32>::from_capacity(4);
+        let ring_buf = BMRingBuf::<f32>::from_capacity(4);
 
         assert_eq!(ring_buf.constrain(-8), 0);
         assert_eq!(ring_buf.constrain(-7), 1);
@@ -526,7 +543,7 @@ mod tests {
 
     #[test]
     fn bit_mask_ring_buf_clear() {
-        let mut ring_buf = BitMaskRingBuf::<f32>::from_capacity(4);
+        let mut ring_buf = BMRingBuf::<f32>::from_capacity(4);
 
         ring_buf.write_latest(&[1.0f32, 2.0, 3.0, 4.0], 0);
         assert_eq!(ring_buf.vec.as_slice(), &[1.0, 2.0, 3.0, 4.0]);
@@ -537,7 +554,7 @@ mod tests {
 
     #[test]
     fn bit_mask_ring_buf_index() {
-        let mut ring_buf = BitMaskRingBuf::<f32>::from_capacity(4);
+        let mut ring_buf = BMRingBuf::<f32>::from_capacity(4);
         ring_buf.write_latest(&[0.0f32, 1.0, 2.0, 3.0], 0);
 
         let ring_buf = &ring_buf;
@@ -563,7 +580,7 @@ mod tests {
 
     #[test]
     fn bit_mask_ring_buf_index_mut() {
-        let mut ring_buf = BitMaskRingBuf::<f32>::from_capacity(4);
+        let mut ring_buf = BMRingBuf::<f32>::from_capacity(4);
         ring_buf.write_latest(&[0.0f32, 1.0, 2.0, 3.0], 0);
 
         assert_eq!(&mut ring_buf[-8], &mut 0.0);
@@ -587,7 +604,7 @@ mod tests {
 
     #[test]
     fn bit_mask_ring_buf_as_slices() {
-        let mut ring_buf = BitMaskRingBuf::<f32>::from_capacity(4);
+        let mut ring_buf = BMRingBuf::<f32>::from_capacity(4);
         ring_buf.write_latest(&[1.0f32, 2.0, 3.0, 4.0], 0);
 
         let (s1, s2) = ring_buf.as_slices(0);
@@ -613,7 +630,7 @@ mod tests {
 
     #[test]
     fn bit_mask_ring_buf_as_mut_slices() {
-        let mut ring_buf = BitMaskRingBuf::<f32>::from_capacity(4);
+        let mut ring_buf = BMRingBuf::<f32>::from_capacity(4);
         ring_buf.write_latest(&[1.0f32, 2.0, 3.0, 4.0], 0);
 
         let (s1, s2) = ring_buf.as_mut_slices(0);
@@ -660,7 +677,7 @@ mod tests {
 
     #[test]
     fn bit_mask_ring_buf_write_latest() {
-        let mut ring_buf = BitMaskRingBuf::<f32>::from_capacity(4);
+        let mut ring_buf = BMRingBuf::<f32>::from_capacity(4);
 
         let input = [0.0f32, 1.0, 2.0, 3.0];
 
@@ -732,7 +749,7 @@ mod tests {
 
     #[test]
     fn bit_mask_ring_buf_as_slices_len() {
-        let mut ring_buf = BitMaskRingBuf::<f32>::from_capacity(4);
+        let mut ring_buf = BMRingBuf::<f32>::from_capacity(4);
         ring_buf.write_latest(&[0.0, 1.0, 2.0, 3.0], 0);
 
         let (s1, s2) = ring_buf.as_slices_len(0, 0);
@@ -833,7 +850,7 @@ mod tests {
 
     #[test]
     fn bit_mask_ring_buf_as_mut_slices_len() {
-        let mut ring_buf = BitMaskRingBuf::<f32>::from_capacity(4);
+        let mut ring_buf = BMRingBuf::<f32>::from_capacity(4);
         ring_buf.write_latest(&[0.0, 1.0, 2.0, 3.0], 0);
 
         let (s1, s2) = ring_buf.as_mut_slices_len(0, 0);
@@ -934,7 +951,7 @@ mod tests {
 
     #[test]
     fn bit_mask_ring_buf_read_into() {
-        let mut ring_buf = BitMaskRingBuf::<f32>::from_capacity(4);
+        let mut ring_buf = BMRingBuf::<f32>::from_capacity(4);
         ring_buf.write_latest(&[0.0, 1.0, 2.0, 3.0], 0);
 
         let mut output = [0.0f32; 4];

@@ -1,32 +1,41 @@
 /// A fast ring buffer implementation with cheap and safe indexing. It works by bit-masking
 /// an integer index to get the corresponding index in an array/vec whose length
 /// is a power of 2. This is best used when indexing the buffer with an `isize` value.
-/// Copies/reads with slices are implemented with memcpy.
+/// Copies/reads with slices are implemented with memcpy. This works the same as
+/// [`BMRingBuf`] except it uses a reference as its data source instead of an internal Vec.
 ///
-/// This works the same as [`BitMaskRingBuf`] except it uses a
-/// reference as its data source instead of an internal Vec.
-///
-/// [`BitMaskRingBuf`]: ../struct.BitMaskRingBuf.html
+/// [`BMRingBuf`]: struct.BMRingBuf.html
 #[allow(missing_debug_implementations)]
-pub struct BitMaskRingBufRef<'a, T: Copy + Clone + Default> {
+pub struct BMRingBufRef<'a, T: Copy + Clone + Default> {
     data: &'a mut [T],
     mask: isize,
 }
 
-impl<'a, T: Copy + Clone + Default> BitMaskRingBufRef<'a, T> {
-    /// Creates a new [`BitMaskRingBufRef`] with the given data.
+impl<'a, T: Copy + Clone + Default> BMRingBufRef<'a, T> {
+    /// Creates a new [`BMRingBufRef`] with the given data.
+    ///
+    /// # Safety
+    ///
+    /// * The data in `slice` must be valid and properly aligned.
+    /// See [`std::slice::from_raw_parts`] for more details.
+    /// * The size in bytes of the data in `slice` should be no larger than `isize::MAX`.
+    /// See [`std::ptr::offset`] for more information when indexing very large buffers
+    /// on 32-bit and 16-bit platforms.
     ///
     /// # Panics
     ///
-    /// * This will panic if the length of the given slice is not a power of 2. It
-    /// will also panic if the length is 0.
+    /// * This will panic if the length of the given slice is not a power of 2
+    /// * This will panic if the length of the slice is less than 2
+    /// * This will panic if the length of the slice is greater than `(std::usize::MAX/2)+1`
     ///
     /// # Undefined Behavior
     ///
     /// * Using this struct may cause undefined behavior if the given data in `slice`
-    /// was not initialized first.
+    /// was not initialized first
     ///
-    /// [`BitMaskRingBufRef`]: struct.BitMaskRingBufRef.html
+    /// [`BMRingBufRef`]: struct.BMRingBufRef.html
+    /// [`std::slice::from_raw_parts`]: https://doc.rust-lang.org/std/slice/fn.from_raw_parts.html
+    /// [`std::ptr::offset`]: https://doc.rust-lang.org/std/primitive.pointer.html#method.offset
     pub fn new(slice: &'a mut [T]) -> Self {
         assert_eq!(slice.len(), crate::next_pow_of_2(slice.len()));
 
@@ -45,7 +54,7 @@ impl<'a, T: Copy + Clone + Default> BitMaskRingBufRef<'a, T> {
     /// Returns two slices that contain the all the data in the ring buffer
     /// starting at the index `start`.
     ///
-    /// ## Returns
+    /// # Returns
     ///
     /// * The first slice is the starting chunk of data. This will never be empty.
     /// * The second slice is the second contiguous chunk of data. This may
@@ -55,7 +64,7 @@ impl<'a, T: Copy + Clone + Default> BitMaskRingBufRef<'a, T> {
     /// # Undefined Behavior
     ///
     /// * Using this may cause undefined behavior if the given data in `slice`
-    /// in `BitMaskRingBufRef::new()` was not initialized first.
+    /// in `BMRingBufRef::new()` was not initialized first.
     pub fn as_slices(&self, start: isize) -> (&[T], &[T]) {
         let start = (start & self.mask) as usize;
 
@@ -80,7 +89,7 @@ impl<'a, T: Copy + Clone + Default> BitMaskRingBufRef<'a, T> {
     /// * `len` - The length of data to read. If `len` is greater than the
     /// capacity of the ring buffer, then that capacity will be used instead.
     ///
-    /// ## Returns
+    /// # Returns
     ///
     /// * The first slice is the starting chunk of data.
     /// * The second slice is the second contiguous chunk of data. This may
@@ -90,7 +99,7 @@ impl<'a, T: Copy + Clone + Default> BitMaskRingBufRef<'a, T> {
     /// # Undefined Behavior
     ///
     /// * Using this may cause undefined behavior if the given data in `slice`
-    /// in `BitMaskRingBufRef::new()` was not initialized first.
+    /// in `BMRingBufRef::new()` was not initialized first.
     pub fn as_slices_len(&self, start: isize, len: usize) -> (&[T], &[T]) {
         let start = (start & self.mask) as usize;
 
@@ -121,7 +130,7 @@ impl<'a, T: Copy + Clone + Default> BitMaskRingBufRef<'a, T> {
     /// Returns two mutable slices that contain the all the data in the ring buffer
     /// starting at the index `start`.
     ///
-    /// ## Returns
+    /// # Returns
     ///
     /// * The first slice is the starting chunk of data. This will never be empty.
     /// * The second slice is the second contiguous chunk of data. This may
@@ -131,7 +140,7 @@ impl<'a, T: Copy + Clone + Default> BitMaskRingBufRef<'a, T> {
     /// # Undefined Behavior
     ///
     /// * Using this may cause undefined behavior if the given data in `slice`
-    /// in `BitMaskRingBufRef::new()` was not initialized first.
+    /// in `BMRingBufRef::new()` was not initialized first.
     pub fn as_mut_slices(&mut self, start: isize) -> (&mut [T], &mut [T]) {
         let start = (start & self.mask) as usize;
 
@@ -159,7 +168,7 @@ impl<'a, T: Copy + Clone + Default> BitMaskRingBufRef<'a, T> {
     /// * `len` - The length of data to read. If `len` is greater than the
     /// capacity of the ring buffer, then that capacity will be used instead.
     ///
-    /// ## Returns
+    /// # Returns
     ///
     /// * The first slice is the starting chunk of data.
     /// * The second slice is the second contiguous chunk of data. This may
@@ -169,7 +178,7 @@ impl<'a, T: Copy + Clone + Default> BitMaskRingBufRef<'a, T> {
     /// # Undefined Behavior
     ///
     /// * Using this may cause undefined behavior if the given data in `slice`
-    /// in `BitMaskRingBufRef::new()` was not initialized first.
+    /// in `BMRingBufRef::new()` was not initialized first.
     pub fn as_mut_slices_len(&mut self, start: isize, len: usize) -> (&mut [T], &mut [T]) {
         let start = (start & self.mask) as usize;
 
@@ -211,7 +220,7 @@ impl<'a, T: Copy + Clone + Default> BitMaskRingBufRef<'a, T> {
     /// # Undefined Behavior
     ///
     /// * Using this may cause undefined behavior if the given data in `slice`
-    /// in `BitMaskRingBufRef::new()` was not initialized first.
+    /// in `BMRingBufRef::new()` was not initialized first.
     pub fn read_into(&self, slice: &mut [T], start: isize) {
         let start = self.constrain(start) as usize;
 
@@ -321,7 +330,7 @@ impl<'a, T: Copy + Clone + Default> BitMaskRingBufRef<'a, T> {
     }
 }
 
-impl<'a, T: Copy + Clone + Default> std::ops::Index<isize> for BitMaskRingBufRef<'a, T> {
+impl<'a, T: Copy + Clone + Default> std::ops::Index<isize> for BMRingBufRef<'a, T> {
     type Output = T;
     fn index(&self, i: isize) -> &T {
         // Safe because of the algorithm of bit-masking the index on an array/vec
@@ -334,7 +343,7 @@ impl<'a, T: Copy + Clone + Default> std::ops::Index<isize> for BitMaskRingBufRef
     }
 }
 
-impl<'a, T: Copy + Clone + Default> std::ops::IndexMut<isize> for BitMaskRingBufRef<'a, T> {
+impl<'a, T: Copy + Clone + Default> std::ops::IndexMut<isize> for BMRingBufRef<'a, T> {
     fn index_mut(&mut self, i: isize) -> &mut T {
         // Safe because of the algorithm of bit-masking the index on an array/vec
         // whose length is a power of 2.
@@ -353,7 +362,7 @@ mod tests {
     #[test]
     fn bit_mask_ring_buf_ref_initialize() {
         let mut data = [0.0; 4];
-        let ring_buf = BitMaskRingBufRef::new(&mut data);
+        let ring_buf = BMRingBufRef::new(&mut data);
 
         assert_eq!(&ring_buf.data[..], &[0.0, 0.0, 0.0, 0.0]);
     }
@@ -361,7 +370,7 @@ mod tests {
     #[test]
     fn bit_mask_ring_buf_ref_constrain() {
         let mut data = [0.0; 4];
-        let ring_buf = BitMaskRingBufRef::new(&mut data);
+        let ring_buf = BMRingBufRef::new(&mut data);
 
         assert_eq!(&ring_buf.data[..], &[0.0, 0.0, 0.0, 0.0]);
 
@@ -387,7 +396,7 @@ mod tests {
     #[test]
     fn bit_mask_ring_buf_ref_clear() {
         let mut data = [0.0; 4];
-        let mut ring_buf = BitMaskRingBufRef::new(&mut data);
+        let mut ring_buf = BMRingBufRef::new(&mut data);
 
         assert_eq!(&ring_buf.data[..], &[0.0, 0.0, 0.0, 0.0]);
 
@@ -401,7 +410,7 @@ mod tests {
     #[test]
     fn bit_mask_ring_buf_ref_index() {
         let mut data = [0.0f32, 1.0, 2.0, 3.0];
-        let ring_buf = BitMaskRingBufRef::new(&mut data);
+        let ring_buf = BMRingBufRef::new(&mut data);
 
         let ring_buf = &ring_buf;
 
@@ -427,7 +436,7 @@ mod tests {
     #[test]
     fn bit_mask_ring_buf_ref_index_mut() {
         let mut data = [0.0f32, 1.0, 2.0, 3.0];
-        let mut ring_buf = BitMaskRingBufRef::new(&mut data);
+        let mut ring_buf = BMRingBufRef::new(&mut data);
 
         assert_eq!(&mut ring_buf[-8], &mut 0.0);
         assert_eq!(&mut ring_buf[-7], &mut 1.0);
@@ -451,7 +460,7 @@ mod tests {
     #[test]
     fn bit_mask_ring_buf_ref_as_slices() {
         let mut data = [1.0f32, 2.0, 3.0, 4.0];
-        let ring_buf = BitMaskRingBufRef::new(&mut data);
+        let ring_buf = BMRingBufRef::new(&mut data);
 
         let (s1, s2) = ring_buf.as_slices(0);
         assert_eq!(s1, &[1.0, 2.0, 3.0, 4.0]);
@@ -477,7 +486,7 @@ mod tests {
     #[test]
     fn bit_mask_ring_buf_ref_as_mut_slices() {
         let mut data = [1.0f32, 2.0, 3.0, 4.0];
-        let mut ring_buf = BitMaskRingBufRef::new(&mut data);
+        let mut ring_buf = BMRingBufRef::new(&mut data);
 
         let (s1, s2) = ring_buf.as_mut_slices(0);
         assert_eq!(s1, &[1.0, 2.0, 3.0, 4.0]);
@@ -527,7 +536,7 @@ mod tests {
     #[test]
     fn bit_mask_ring_buf_ref_write_latest() {
         let mut data = Aligned324([0.0f32; 4]);
-        let mut ring_buf = BitMaskRingBufRef::new(&mut data.0);
+        let mut ring_buf = BMRingBufRef::new(&mut data.0);
 
         let input = [0.0f32, 1.0, 2.0, 3.0];
 
@@ -600,7 +609,7 @@ mod tests {
     #[test]
     fn bit_mask_ring_buf_ref_as_slices_len() {
         let mut data = [0.0f32, 1.0, 2.0, 3.0];
-        let ring_buf = BitMaskRingBufRef::new(&mut data);
+        let ring_buf = BMRingBufRef::new(&mut data);
 
         let (s1, s2) = ring_buf.as_slices_len(0, 0);
         assert_eq!(s1, &[]);
@@ -701,7 +710,7 @@ mod tests {
     #[test]
     fn bit_mask_ring_buf_ref_as_mut_slices_len() {
         let mut data = [0.0f32, 1.0, 2.0, 3.0];
-        let mut ring_buf = BitMaskRingBufRef::new(&mut data);
+        let mut ring_buf = BMRingBufRef::new(&mut data);
 
         let (s1, s2) = ring_buf.as_mut_slices_len(0, 0);
         assert_eq!(s1, &[]);
@@ -802,7 +811,7 @@ mod tests {
     #[test]
     fn bit_mask_ring_buf_ref_read_into() {
         let mut data = Aligned324([0.0f32, 1.0, 2.0, 3.0]);
-        let ring_buf = BitMaskRingBufRef::new(&mut data.0);
+        let ring_buf = BMRingBufRef::new(&mut data.0);
 
         let mut output = [0.0f32; 4];
 

@@ -7,36 +7,34 @@ A fast ring buffer implementation with cheap and safe indexing written in Rust. 
 
 This crate has no consumer/producer logic, and is meant to be used as a raw data structure or a base for other data structures.
 
-Note, this crate has not been tested in a production environment yet. If you find any bugs, especially ones pertaining to memory safety, please let me know!
-
 ## Example
 ```rust
-use bit_mask_ring_buf::{BitMaskRingBuf, BitMaskRingBufRef};
+use bit_mask_ring_buf::{BMRingBuf, BMRingBufRef};
 
 // Create a ring buffer with type u32. The data will be
 // initialized with the default value (0 in this case).
 // The actual capacity will be set to the next highest
 // power of 2 if the given capacity is not already
 // a power of 2.
-let mut rb = BitMaskRingBuf::<u32>::from_capacity(3);
+let mut rb = BMRingBuf::<u32>::from_capacity(3);
 assert_eq!(rb.capacity(), 4);
 
-// read/write to buffer by indexing
+// Read/write to buffer by indexing
 rb[0] = 0;
 rb[1] = 1;
 rb[2] = 2;
 rb[3] = 3;
 
-// cheaply wrap when reading/writing outside of bounds
+// Cheaply wrap when reading/writing outside of bounds
 assert_eq!(rb[-1], 3);
 assert_eq!(rb[10], 2);
 
-// memcpy into slices at arbitrary points and length
+// Memcpy into slices at arbitrary points and length
 let mut read_buffer = [0u32; 7];
 rb.read_into(&mut read_buffer, 2);
 assert_eq!(read_buffer, [2, 3, 0, 1, 2, 3, 0]);
 
-// memcpy data from a slice into the ring buffer. Only
+// Memcpy data from a slice into the ring buffer. Only
 // the latest data will be copied.
 rb.write_latest(&[0, 2, 3, 4, 1], 0);
 assert_eq!(rb[0], 1);
@@ -44,14 +42,14 @@ assert_eq!(rb[1], 2);
 assert_eq!(rb[2], 3);
 assert_eq!(rb[3], 4);
 
-// read/write by retreiving slices directly
+// Read/write by retrieving slices directly
 let (s1, s2) = rb.as_slices_len(1, 4);
 assert_eq!(s1, &[2, 3, 4]);
 assert_eq!(s2, &[1]);
 
-// aligned/stack data may also be used
+// Aligned/stack data may also be used
 let mut stack_data = [0u32, 1, 2, 3];
-let mut rb_ref = BitMaskRingBufRef::new(&mut stack_data);
+let mut rb_ref = BMRingBufRef::new(&mut stack_data);
 rb_ref[-4] = 5;
 assert_eq!(rb_ref[0], 5);
 assert_eq!(rb_ref[1], 1);
