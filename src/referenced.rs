@@ -272,13 +272,10 @@ impl<'a, T: Copy + Clone + Default> BMRingBufRef<'a, T> {
             (
                 &slice[slice.len() - self.data.len()..],
                 // Find new starting point if slice length has changed
-                self.constrain(end_i - self.data.len() as isize) as usize
+                self.constrain(end_i - self.data.len() as isize) as usize,
             )
         } else {
-            (
-                &slice[..],
-                self.constrain(start) as usize
-            )
+            (&slice[..], self.constrain(start) as usize)
         };
 
         // Safe because of the algorithm of bit-masking the index on an array/vec
