@@ -62,7 +62,7 @@ impl<'a, T: Copy + Clone + Default> BMRingBufRef<'a, T> {
     /// or may not be empty depending if the buffer needed to wrap around to the beginning of
     /// its internal memory layout.
     pub fn as_slices(&self, start: isize) -> (&[T], &[T]) {
-        let start = (start & self.mask) as usize;
+        let start = self.constrain(start) as usize;
 
         // Safe because of the algorithm of bit-masking the index on an array/vec
         // whose length is a power of 2.
@@ -97,7 +97,7 @@ impl<'a, T: Copy + Clone + Default> BMRingBufRef<'a, T> {
     /// or may not be empty depending if the buffer needed to wrap around to the beginning of
     /// its internal memory layout.
     pub fn as_slices_len(&self, start: isize, len: usize) -> (&[T], &[T]) {
-        let start = (start & self.mask) as usize;
+        let start = self.constrain(start) as usize;
 
         // Safe because of the algorithm of bit-masking the index on an array/vec
         // whose length is a power of 2.
@@ -138,7 +138,7 @@ impl<'a, T: Copy + Clone + Default> BMRingBufRef<'a, T> {
     /// or may not be empty depending if the buffer needed to wrap around to the beginning of
     /// its internal memory layout.
     pub fn as_mut_slices(&mut self, start: isize) -> (&mut [T], &mut [T]) {
-        let start = (start & self.mask) as usize;
+        let start = self.constrain(start) as usize;
 
         // Safe because of the algorithm of bit-masking the index on an array/vec
         // whose length is a power of 2.
@@ -176,7 +176,7 @@ impl<'a, T: Copy + Clone + Default> BMRingBufRef<'a, T> {
     /// or may not be empty depending if the buffer needed to wrap around to the beginning of
     /// its internal memory layout.
     pub fn as_mut_slices_len(&mut self, start: isize, len: usize) -> (&mut [T], &mut [T]) {
-        let start = (start & self.mask) as usize;
+        let start = self.constrain(start) as usize;
 
         // Safe because of the algorithm of bit-masking the index on an array/vec
         // whose length is a power of 2.
@@ -266,17 +266,20 @@ impl<'a, T: Copy + Clone + Default> BMRingBufRef<'a, T> {
     /// * `slice` - This slice to copy data from.
     /// * `start` - The index of the ring buffer to start copying from.
     pub fn write_latest(&mut self, slice: &[T], start: isize) {
-        let end_i = start + slice.len() as isize;
-
         // If slice is longer than self.data, retreive only the latest portion
-        let slice = if slice.len() > self.data.len() {
-            &slice[slice.len() - self.data.len()..]
+        let (slice, start_i) = if slice.len() > self.data.len() {
+            let end_i = start + slice.len() as isize;
+            (
+                &slice[slice.len() - self.data.len()..],
+                // Find new starting point if slice length has changed
+                self.constrain(end_i - self.data.len() as isize) as usize
+            )
         } else {
-            &slice[..]
+            (
+                &slice[..],
+                self.constrain(start) as usize
+            )
         };
-
-        // Find new starting point if slice length has changed
-        let start_i = self.constrain(end_i - slice.len() as isize) as usize;
 
         // Safe because of the algorithm of bit-masking the index on an array/vec
         // whose length is a power of 2.
