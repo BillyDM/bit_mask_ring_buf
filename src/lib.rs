@@ -516,10 +516,7 @@ mod tests {
     #[test]
     #[should_panic]
     fn next_pow_of_2_panic_test() {
-        assert_eq!(
-            next_pow_of_2((std::usize::MAX / 2) + 2),
-            std::usize::MAX
-        );
+        assert_eq!(next_pow_of_2((std::usize::MAX / 2) + 2), std::usize::MAX);
     }
 
     #[test]
