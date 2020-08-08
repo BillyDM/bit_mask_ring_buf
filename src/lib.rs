@@ -64,17 +64,13 @@ pub use referenced::BMRingBufRef;
 ///
 /// # Panics
 ///
-/// * This will panic if n > (std::usize::MAX/2)+1
+/// * This will panic if `n > (std::usize::MAX/2)+1`
 pub fn next_pow_of_2(n: usize) -> usize {
     if n < 2 {
         return 2;
     }
 
-    // algorithm by wrl#0828 on Discord
-    let shift = usize::MAX
-        .count_ones()
-        .saturating_sub((n - 1).leading_zeros());
-    1usize << shift
+    n.checked_next_power_of_two().unwrap()
 }
 
 static MS_TO_SEC_RATIO: f64 = 1.0 / 1000.0;
@@ -83,7 +79,6 @@ static MS_TO_SEC_RATIO: f64 = 1.0 / 1000.0;
 /// an integer index to get the corresponding index in an array/vec whose length
 /// is a power of 2. This is best used when indexing the buffer with an `isize` value.
 /// Copies/reads with slices are implemented with memcpy.
-#[allow(missing_debug_implementations)]
 pub struct BMRingBuf<T: Copy + Clone + Default> {
     vec: Vec<T>,
     mask: isize,
@@ -186,7 +181,7 @@ impl<T: Copy + Clone + Default> BMRingBuf<T> {
         self.vec.resize(len, Default::default());
     }
 
-    /// Returns two slices that contain the all the data in the ring buffer
+    /// Returns two slices that contain all the data in the ring buffer
     /// starting at the index `start`.
     ///
     /// # Returns
@@ -258,7 +253,7 @@ impl<T: Copy + Clone + Default> BMRingBuf<T> {
         }
     }
 
-    /// Returns two mutable slices that contain the all the data in the ring buffer
+    /// Returns two mutable slices that contain all the data in the ring buffer
     /// starting at the index `start`.
     ///
     /// # Returns
@@ -508,6 +503,15 @@ mod tests {
         assert_eq!(
             next_pow_of_2((std::usize::MAX / 2) + 1),
             (std::usize::MAX / 2) + 1
+        );
+    }
+
+    #[test]
+    #[should_panic]
+    fn next_pow_of_2_panic_test() {
+        assert_eq!(
+            next_pow_of_2((std::usize::MAX / 2) + 2),
+            std::usize::MAX
         );
     }
 

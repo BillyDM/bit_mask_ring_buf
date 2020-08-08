@@ -5,7 +5,6 @@
 /// [`BMRingBuf`] except it uses a reference as its data source instead of an internal Vec.
 ///
 /// [`BMRingBuf`]: struct.BMRingBuf.html
-#[allow(missing_debug_implementations)]
 pub struct BMRingBufRef<'a, T: Copy + Clone + Default> {
     data: &'a mut [T],
     mask: isize,
@@ -16,6 +15,8 @@ impl<'a, T: Copy + Clone + Default> BMRingBufRef<'a, T> {
     ///
     /// # Safety
     ///
+    /// * Using this struct may cause undefined behavior if the given data in `slice`
+    /// was not initialized first
     /// * The data in `slice` must be valid and properly aligned.
     /// See [`std::slice::from_raw_parts`] for more details.
     /// * The size in bytes of the data in `slice` should be no larger than `isize::MAX`.
@@ -27,11 +28,6 @@ impl<'a, T: Copy + Clone + Default> BMRingBufRef<'a, T> {
     /// * This will panic if the length of the given slice is not a power of 2
     /// * This will panic if the length of the slice is less than 2
     /// * This will panic if the length of the slice is greater than `(std::usize::MAX/2)+1`
-    ///
-    /// # Undefined Behavior
-    ///
-    /// * Using this struct may cause undefined behavior if the given data in `slice`
-    /// was not initialized first
     ///
     /// [`BMRingBufRef`]: struct.BMRingBufRef.html
     /// [`std::slice::from_raw_parts`]: https://doc.rust-lang.org/std/slice/fn.from_raw_parts.html
@@ -51,8 +47,13 @@ impl<'a, T: Copy + Clone + Default> BMRingBufRef<'a, T> {
         }
     }
 
-    /// Returns two slices that contain the all the data in the ring buffer
+    /// Returns two slices that contain all the data in the ring buffer
     /// starting at the index `start`.
+    ///
+    /// # Safety
+    ///
+    /// * Using this may cause undefined behavior if the given data in `slice`
+    /// in `BMRingBufRef::new()` was not initialized first.
     ///
     /// # Returns
     ///
@@ -60,11 +61,6 @@ impl<'a, T: Copy + Clone + Default> BMRingBufRef<'a, T> {
     /// * The second slice is the second contiguous chunk of data. This may
     /// or may not be empty depending if the buffer needed to wrap around to the beginning of
     /// its internal memory layout.
-    ///
-    /// # Undefined Behavior
-    ///
-    /// * Using this may cause undefined behavior if the given data in `slice`
-    /// in `BMRingBufRef::new()` was not initialized first.
     pub fn as_slices(&self, start: isize) -> (&[T], &[T]) {
         let start = (start & self.mask) as usize;
 
@@ -89,17 +85,17 @@ impl<'a, T: Copy + Clone + Default> BMRingBufRef<'a, T> {
     /// * `len` - The length of data to read. If `len` is greater than the
     /// capacity of the ring buffer, then that capacity will be used instead.
     ///
+    /// # Safety
+    ///
+    /// * Using this may cause undefined behavior if the given data in `slice`
+    /// in `BMRingBufRef::new()` was not initialized first.
+    ///
     /// # Returns
     ///
     /// * The first slice is the starting chunk of data.
     /// * The second slice is the second contiguous chunk of data. This may
     /// or may not be empty depending if the buffer needed to wrap around to the beginning of
     /// its internal memory layout.
-    ///
-    /// # Undefined Behavior
-    ///
-    /// * Using this may cause undefined behavior if the given data in `slice`
-    /// in `BMRingBufRef::new()` was not initialized first.
     pub fn as_slices_len(&self, start: isize, len: usize) -> (&[T], &[T]) {
         let start = (start & self.mask) as usize;
 
@@ -127,8 +123,13 @@ impl<'a, T: Copy + Clone + Default> BMRingBufRef<'a, T> {
         }
     }
 
-    /// Returns two mutable slices that contain the all the data in the ring buffer
+    /// Returns two mutable slices that contain all the data in the ring buffer
     /// starting at the index `start`.
+    ///
+    /// # Safety
+    ///
+    /// * Using this may cause undefined behavior if the given data in `slice`
+    /// in `BMRingBufRef::new()` was not initialized first.
     ///
     /// # Returns
     ///
@@ -136,11 +137,6 @@ impl<'a, T: Copy + Clone + Default> BMRingBufRef<'a, T> {
     /// * The second slice is the second contiguous chunk of data. This may
     /// or may not be empty depending if the buffer needed to wrap around to the beginning of
     /// its internal memory layout.
-    ///
-    /// # Undefined Behavior
-    ///
-    /// * Using this may cause undefined behavior if the given data in `slice`
-    /// in `BMRingBufRef::new()` was not initialized first.
     pub fn as_mut_slices(&mut self, start: isize) -> (&mut [T], &mut [T]) {
         let start = (start & self.mask) as usize;
 
@@ -168,17 +164,17 @@ impl<'a, T: Copy + Clone + Default> BMRingBufRef<'a, T> {
     /// * `len` - The length of data to read. If `len` is greater than the
     /// capacity of the ring buffer, then that capacity will be used instead.
     ///
+    /// # Safety
+    ///
+    /// * Using this may cause undefined behavior if the given data in `slice`
+    /// in `BMRingBufRef::new()` was not initialized first.
+    ///
     /// # Returns
     ///
     /// * The first slice is the starting chunk of data.
     /// * The second slice is the second contiguous chunk of data. This may
     /// or may not be empty depending if the buffer needed to wrap around to the beginning of
     /// its internal memory layout.
-    ///
-    /// # Undefined Behavior
-    ///
-    /// * Using this may cause undefined behavior if the given data in `slice`
-    /// in `BMRingBufRef::new()` was not initialized first.
     pub fn as_mut_slices_len(&mut self, start: isize, len: usize) -> (&mut [T], &mut [T]) {
         let start = (start & self.mask) as usize;
 
@@ -214,13 +210,13 @@ impl<'a, T: Copy + Clone + Default> BMRingBufRef<'a, T> {
     /// capacity of the ring buffer, then the data will be reapeated until
     /// the given slice is filled.
     ///
-    /// * `slice` - This slice to copy the data into.
-    /// * `start` - The index of the ring buffer to start copying from.
-    ///
-    /// # Undefined Behavior
+    /// # Safety
     ///
     /// * Using this may cause undefined behavior if the given data in `slice`
     /// in `BMRingBufRef::new()` was not initialized first.
+    ///
+    /// * `slice` - This slice to copy the data into.
+    /// * `start` - The index of the ring buffer to start copying from.
     pub fn read_into(&self, slice: &mut [T], start: isize) {
         let start = self.constrain(start) as usize;
 
