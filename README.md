@@ -7,6 +7,12 @@ A fast ring buffer implementation with cheap and safe indexing written in Rust. 
 
 This crate has no consumer/producer logic, and is meant to be used as a raw data structure or a base for other data structures.
 
+## Installation
+Add `bit_mask_ring_buf` as a dependency in your `Cargo.toml`:
+```toml
+bit_mask_ring_buf = 0.2
+```
+
 ## Example
 ```rust
 use bit_mask_ring_buf::{BMRingBuf, BMRingBufRef};
