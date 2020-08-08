@@ -13,6 +13,7 @@
 //! bit_mask_ring_buf = 0.2
 //! ```
 //!
+//! ## Example
 //! ```rust
 //! use bit_mask_ring_buf::{BMRingBuf, BMRingBufRef};
 //!
