@@ -1,8 +1,8 @@
 # Bit-Masking Ring Buffer
+[![Build Status](https://travis-ci.com/BillyDM/bit_mask_ring_buf.svg?branch=master)](https://travis-ci.com/BillyDM/bit_mask_ring_buf)
 [![Documentation](https://docs.rs/bit_mask_ring_buf/badge.svg)][documentation]
 [![Crates.io](https://img.shields.io/crates/v/bit_mask_ring_buf.svg)](https://crates.io/crates/bit_mask_ring_buf)
 [![License](https://img.shields.io/crates/l/bit_mask_ring_buf.svg)](https://github.com/BillyDM/bit_mask_ring_buf/blob/master/LICENSE)
-[![Build Status](https://travis-ci.com/BillyDM/bit_mask_ring_buf.svg?branch=master)](https://travis-ci.com/BillyDM/bit_mask_ring_buf)
 
 A fast ring buffer implementation with cheap and safe indexing written in Rust. It works by bit-masking an integer index to get the corresponding index in an array/vec whose length is a power of 2. This is best used when indexing the buffer with an `isize` value. Copies/reads with slices are implemented with memcpy. This is most useful for high performance algorithms such as audio DSP.
 
