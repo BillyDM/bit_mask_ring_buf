@@ -1,5 +1,5 @@
 # Bit-Masking Ring Buffer
-[![Build Status](https://travis-ci.com/BillyDM/bit_mask_ring_buf.svg?branch=master)](https://travis-ci.com/BillyDM/bit_mask_ring_buf)
+![Rust](https://github.com/BillyDM/bit_mask_ring_buf/workflows/Rust/badge.svg)
 [![Documentation](https://docs.rs/bit_mask_ring_buf/badge.svg)][documentation]
 [![Crates.io](https://img.shields.io/crates/v/bit_mask_ring_buf.svg)](https://crates.io/crates/bit_mask_ring_buf)
 [![License](https://img.shields.io/crates/l/bit_mask_ring_buf.svg)](https://github.com/BillyDM/bit_mask_ring_buf/blob/master/LICENSE)
