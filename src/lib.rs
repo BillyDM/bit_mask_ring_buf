@@ -117,6 +117,36 @@ impl<T: Copy + Clone + Default> BMRingBuf<T> {
         new_self
     }
 
+    /// Creates a new [`BMRingBuf`] with a capacity that is at least the given
+    /// capacity. The data in the buffer will not be initialized.
+    ///
+    /// * `capacity` - The capacity of the ring buffer. The actual capacity will be set
+    /// to the next highest power of 2 if `capacity` is not already a power of 2.
+    /// Capacity will be set to 2 if `capacity < 2`.
+    ///
+    /// # Safety
+    ///
+    /// * Undefined behavior may occur if uninitialized data is read from. By using
+    /// this you assume the responsibility of making sure any data is initialized
+    /// before it is read.
+    ///
+    /// # Panics
+    ///
+    /// * This will panic if this tries to allocate more than `isize::MAX` bytes
+    /// * This will panic if `capacity > (std::usize::MAX/2)+1`
+    ///
+    /// [`BMRingBuf`]: struct.BMRingBuf.html
+    pub unsafe fn from_capacity_uninit(capacity: usize) -> Self {
+        let mut new_self = Self {
+            vec: Vec::new(),
+            mask: 0,
+        };
+
+        new_self.set_capacity_uninit(capacity);
+
+        new_self
+    }
+
     /// Creates a new [`BMRingBuf`] with a capacity that holds at least a number of
     /// frames/samples in a given time peroid. The actual capacity will be set to the
     /// lowest power of 2 that can hold that many values.
@@ -144,6 +174,39 @@ impl<T: Copy + Clone + Default> BMRingBuf<T> {
         new_self
     }
 
+    /// Creates a new [`BMRingBuf`] with a capacity that holds at least a number of
+    /// frames/samples in a given time peroid. The data in the buffer will not be
+    /// initialized. The actual capacity will be set to the lowest power of 2 that
+    /// can hold that many values. The capacity will be set to 2 if the resulting
+    /// capacity is less than 2.
+    ///
+    /// * `milliseconds` - The time period in milliseconds
+    /// * `sample_rate` - The sample rate in samples per second
+    ///
+    /// # Safety
+    ///
+    /// * Undefined behavior may occur if uninitialized data is read from. By using
+    /// this you assume the responsibility of making sure any data is initialized
+    /// before it is read.
+    ///
+    /// # Panics
+    ///
+    /// * This will panic if either `milliseconds` or `sample_rate` is less than 0
+    /// * This will panic if this tries to allocate more than `isize::MAX` bytes
+    /// * This will panic if the resulting capacity is greater than `(std::usize::MAX/2)+1`
+    ///
+    /// [`BMRingBuf`]: struct.BMRingBuf.html
+    pub unsafe fn from_ms_uninit(milliseconds: f64, sample_rate: f64) -> Self {
+        let mut new_self = Self {
+            vec: Vec::new(),
+            mask: 0,
+        };
+
+        new_self.set_capacity_from_ms_uninit(milliseconds, sample_rate);
+
+        new_self
+    }
+
     /// Sets the capacity of the ring buffer. The actual capacity will be set
     /// to the next highest power of 2 if `capacity` is not already a power of 2.
     /// This will also clear all values to the default value.
@@ -159,7 +222,29 @@ impl<T: Copy + Clone + Default> BMRingBuf<T> {
         self.mask = (self.vec.len() as isize) - 1;
     }
 
-    /// Creates a new [`BMRingBuf`] with a capacity that holds at least a number of
+    /// Sets the capacity of the ring buffer without initializing data.
+    /// The actual capacity will be set to the next highest power of 2 if
+    /// `capacity` is not already a power of 2. The capacity will be set to
+    /// 2 if `capacity < 2`.
+    ///
+    /// # Safety
+    ///
+    /// * Undefined behavior may occur if uninitialized data is read from. By using
+    /// this you assume the responsibility of making sure any data is initialized
+    /// before it is read.
+    ///
+    /// # Panics
+    ///
+    /// * This will panic if this tries to allocate more than `isize::MAX` bytes
+    /// * This will panic if `capacity > (std::usize::MAX/2)+1`
+    pub unsafe fn set_capacity_uninit(&mut self, capacity: usize) {
+        let capacity = next_pow_of_2(capacity);
+        self.vec.reserve_exact(capacity);
+        self.vec.set_len(capacity);
+        self.mask = (self.vec.len() as isize) - 1;
+    }
+
+    /// Sets the capacity of the ring buffer to hold at least a number of
     /// frames/samples in a given time peroid. The actual capacity will be set to the
     /// lowest power of 2 that can hold that many values.
     /// This will also clear all values to the default value.
@@ -180,6 +265,35 @@ impl<T: Copy + Clone + Default> BMRingBuf<T> {
         assert!(sample_rate >= 0.0);
 
         self.set_capacity((milliseconds * MS_TO_SEC_RATIO * sample_rate).ceil() as usize);
+    }
+
+    /// Creates a new [`BMRingBuf`] with a capacity that holds at least a number of
+    /// frames/samples in a given time peroid. Any newly allocated data will not be
+    /// initialized. The actual capacity will be set to the lowest power of 2 that
+    /// can hold that many values. The capacity will be set to 2 if the resulting
+    /// capacity is less than 2.
+    ///
+    /// * `milliseconds` - The time period in milliseconds
+    /// * `sample_rate` - The sample rate in samples per second
+    ///
+    /// # Safety
+    ///
+    /// * Undefined behavior may occur if uninitialized data is read from. By using
+    /// this you assume the responsibility of making sure any data is initialized
+    /// before it is read.
+    ///
+    /// # Panics
+    ///
+    /// * This will panic if either `milliseconds` or `sample_rate` is less than 0
+    /// * This will panic if this tries to allocate more than `isize::MAX` bytes
+    /// * This will panic if the resulting capacity is greater than `(std::usize::MAX/2)+1`
+    ///
+    /// [`BMRingBuf`]: struct.BMRingBuf.html
+    pub unsafe fn set_capacity_from_ms_uninit(&mut self, milliseconds: f64, sample_rate: f64) {
+        assert!(milliseconds >= 0.0);
+        assert!(sample_rate >= 0.0);
+
+        self.set_capacity_uninit((milliseconds * MS_TO_SEC_RATIO * sample_rate).ceil() as usize);
     }
 
     /// Clears all values in the ring buffer to the default value.
@@ -522,9 +636,18 @@ mod tests {
 
     #[test]
     fn bit_mask_ring_buf_initialize() {
-        let ring_buf = BMRingBuf::<f32>::from_capacity(4);
+        let ring_buf = BMRingBuf::<f32>::from_capacity(3);
 
         assert_eq!(&ring_buf.vec[..], &[0.0, 0.0, 0.0, 0.0]);
+    }
+
+    #[test]
+    fn bit_mask_ring_buf_initialize_uninit() {
+        unsafe {
+            let ring_buf = BMRingBuf::<f32>::from_capacity_uninit(3);
+
+            assert_eq!(ring_buf.vec.len(), 4);
+        }
     }
 
     #[test]
