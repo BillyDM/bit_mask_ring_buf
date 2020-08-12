@@ -5,6 +5,7 @@
 /// [`BMRingBuf`] except it uses a reference as its data source instead of an internal Vec.
 ///
 /// [`BMRingBuf`]: struct.BMRingBuf.html
+#[derive(Debug)]
 pub struct BMRingBufRef<'a, T: Copy + Clone + Default> {
     data: &'a mut [T],
     mask: isize,
