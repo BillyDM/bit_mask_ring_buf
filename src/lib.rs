@@ -86,6 +86,7 @@ static MS_TO_SEC_RATIO: f64 = 1.0 / 1000.0;
 /// an integer index to get the corresponding index in an array/vec whose length
 /// is a power of 2. This is best used when indexing the buffer with an `isize` value.
 /// Copies/reads with slices are implemented with memcpy.
+#[derive(Clone)]
 pub struct BMRingBuf<T: Copy + Clone + Default> {
     vec: Vec<T>,
     mask: isize,
