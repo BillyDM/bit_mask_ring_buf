@@ -314,6 +314,33 @@ impl<'a, T: Copy + Clone + Default> BMRingBufRef<'a, T> {
         }
     }
 
+    /// Copies data from two given slices into the ring buffer starting from
+    /// the index `start`. The `first` slice will be copied first then `second`
+    /// will be copied next. If the length of the slices is larger than the
+    /// capacity of the ring buffer, then only the latest data will be copied.
+    /// Data in the first slice will not be copied if it will be overwritten by
+    /// the second slice, reducing the amount of unnecessary copying.
+    ///
+    /// * `first` - This first slice to copy data from.
+    /// * `second` - This second slice to copy data from.
+    /// * `start` - The index of the ring buffer to start copying from.
+    pub fn write_latest_2(&mut self, first: &[T], second: &[T], start: isize) {
+        if first.len() + second.len() <= self.capacity() {
+            // All data from both slices need to be copied.
+            self.write_latest(first, start);
+        } else if second.len() < self.capacity(){
+            // Only data from the end part of first and all of second needs to be copied.
+            let first_end_part_len = self.capacity() - second.len();
+            let first_end_part_start = first.len() - first_end_part_len;
+            let first_end_part = &first[first_end_part_start..];
+
+            self.write_latest(first_end_part, start + first_end_part_start as isize);
+        }
+        // else - Only data from second needs to be copied
+
+        self.write_latest(second, start + first.len() as isize);
+    }
+
     /// Returns the capacity of the ring buffer.
     pub fn capacity(&self) -> usize {
         self.data.len()
@@ -529,6 +556,37 @@ mod tests {
 
     #[repr(C, align(32))]
     struct Aligned324([f32; 4]);
+
+    #[test]
+    fn bit_mask_ring_buf_ref_write_latest_2() {
+        let mut data = Aligned324([0.0f32; 4]);
+        let mut ring_buf = BMRingBufRef::new(&mut data.0);
+
+        ring_buf.write_latest_2(&[], &[0.0, 1.0, 2.0, 3.0, 4.0], 1);
+        assert_eq!(ring_buf.data, &[3.0, 4.0, 1.0, 2.0]);
+        ring_buf.write_latest_2(&[-1.0], &[0.0, 1.0, 2.0, 3.0, 4.0], 1);
+        assert_eq!(ring_buf.data, &[2.0, 3.0, 4.0, 1.0]);
+        ring_buf.write_latest_2(&[-2.0, -1.0], &[0.0, 1.0, 2.0, 3.0, 4.0], 1);
+        assert_eq!(ring_buf.data, &[1.0, 2.0, 3.0, 4.0]);
+        ring_buf.write_latest_2(&[-2.0, -1.0], &[0.0, 1.0], 3);
+        assert_eq!(ring_buf.data, &[-1.0, 0.0, 1.0, -2.0]);
+        ring_buf.write_latest_2(&[0.0, 1.0], &[2.0], 3);
+        assert_eq!(ring_buf.data, &[1.0, 2.0, 1.0, 0.0]);
+        ring_buf.write_latest_2(&[1.0, 2.0, 3.0, 4.0], &[], 0);
+        assert_eq!(ring_buf.data, &[1.0, 2.0, 3.0, 4.0]);
+        ring_buf.write_latest_2(&[1.0, 2.0], &[], 2);
+        assert_eq!(ring_buf.data, &[1.0, 2.0, 1.0, 2.0]);
+        ring_buf.write_latest_2(&[], &[], 2);
+        assert_eq!(ring_buf.data, &[1.0, 2.0, 1.0, 2.0]);
+        ring_buf.write_latest_2(&[1.0, 2.0, 3.0, 4.0, 5.0], &[], 1);
+        assert_eq!(ring_buf.data, &[4.0, 5.0, 2.0, 3.0]);
+        ring_buf.write_latest_2(&[1.0, 2.0, 3.0, 4.0, 5.0], &[6.0], 2);
+        assert_eq!(ring_buf.data, &[3.0, 4.0, 5.0, 6.0]);
+        ring_buf.write_latest_2(&[1.0, 2.0, 3.0, 4.0, 5.0], &[6.0, 7.0], 2);
+        assert_eq!(ring_buf.data, &[7.0, 4.0, 5.0, 6.0]);
+        ring_buf.write_latest_2(&[1.0, 2.0, 3.0, 4.0, 5.0], &[6.0, 7.0, 8.0, 9.0, 10.0], 3);
+        assert_eq!(ring_buf.data, &[10.0, 7.0, 8.0, 9.0]);
+    }
 
     #[test]
     fn bit_mask_ring_buf_ref_write_latest() {
