@@ -328,7 +328,7 @@ impl<'a, T: Copy + Clone + Default> BMRingBufRef<'a, T> {
         if first.len() + second.len() <= self.capacity() {
             // All data from both slices need to be copied.
             self.write_latest(first, start);
-        } else if second.len() < self.capacity(){
+        } else if second.len() < self.capacity() {
             // Only data from the end part of first and all of second needs to be copied.
             let first_end_part_len = self.capacity() - second.len();
             let first_end_part_start = first.len() - first_end_part_len;
