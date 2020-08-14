@@ -10,7 +10,7 @@
 //! ## Installation
 //! Add `bit_mask_ring_buf` as a dependency in your `Cargo.toml`:
 //! ```toml
-//! bit_mask_ring_buf = 0.2
+//! bit_mask_ring_buf = 0.3
 //! ```
 //!
 //! ## Example
@@ -155,6 +155,7 @@ impl<T: Copy + Clone + Default> BMRingBuf<T> {
     ///
     /// * `milliseconds` - The time period in milliseconds
     /// * `sample_rate` - The sample rate in samples per second
+    /// * `padding` - Any additional number of samples to use as padding
     ///
     /// # Panics
     ///
@@ -163,13 +164,13 @@ impl<T: Copy + Clone + Default> BMRingBuf<T> {
     /// * This will panic if the resulting capacity is greater than `(std::usize::MAX/2)+1`
     ///
     /// [`BMRingBuf`]: struct.BMRingBuf.html
-    pub fn from_ms(milliseconds: f64, sample_rate: f64) -> Self {
+    pub fn from_ms(milliseconds: f64, sample_rate: f64, padding: usize) -> Self {
         let mut new_self = Self {
             vec: Vec::new(),
             mask: 0,
         };
 
-        new_self.set_capacity_from_ms(milliseconds, sample_rate);
+        new_self.set_capacity_from_ms(milliseconds, sample_rate, padding);
 
         new_self
     }
@@ -182,6 +183,7 @@ impl<T: Copy + Clone + Default> BMRingBuf<T> {
     ///
     /// * `milliseconds` - The time period in milliseconds
     /// * `sample_rate` - The sample rate in samples per second
+    /// * `padding` - Any additional number of samples to use as padding
     ///
     /// # Safety
     ///
@@ -196,13 +198,13 @@ impl<T: Copy + Clone + Default> BMRingBuf<T> {
     /// * This will panic if the resulting capacity is greater than `(std::usize::MAX/2)+1`
     ///
     /// [`BMRingBuf`]: struct.BMRingBuf.html
-    pub unsafe fn from_ms_uninit(milliseconds: f64, sample_rate: f64) -> Self {
+    pub unsafe fn from_ms_uninit(milliseconds: f64, sample_rate: f64, padding: usize) -> Self {
         let mut new_self = Self {
             vec: Vec::new(),
             mask: 0,
         };
 
-        new_self.set_capacity_from_ms_uninit(milliseconds, sample_rate);
+        new_self.set_capacity_from_ms_uninit(milliseconds, sample_rate, padding);
 
         new_self
     }
@@ -252,6 +254,7 @@ impl<T: Copy + Clone + Default> BMRingBuf<T> {
     ///
     /// * `milliseconds` - The time period in milliseconds
     /// * `sample_rate` - The sample rate in samples per second
+    /// * `padding` - Any additional number of samples to use as padding
     ///
     /// # Panics
     ///
@@ -260,11 +263,11 @@ impl<T: Copy + Clone + Default> BMRingBuf<T> {
     /// * This will panic if the resulting capacity is greater than `(std::usize::MAX/2)+1`
     ///
     /// [`BMRingBuf`]: struct.BMRingBuf.html
-    pub fn set_capacity_from_ms(&mut self, milliseconds: f64, sample_rate: f64) {
+    pub fn set_capacity_from_ms(&mut self, milliseconds: f64, sample_rate: f64, padding: usize) {
         assert!(milliseconds >= 0.0);
         assert!(sample_rate >= 0.0);
 
-        self.set_capacity((milliseconds * MS_TO_SEC_RATIO * sample_rate).ceil() as usize);
+        self.set_capacity((milliseconds * MS_TO_SEC_RATIO * sample_rate).ceil() as usize + padding);
     }
 
     /// Creates a new [`BMRingBuf`] with a capacity that holds at least a number of
@@ -275,6 +278,7 @@ impl<T: Copy + Clone + Default> BMRingBuf<T> {
     ///
     /// * `milliseconds` - The time period in milliseconds
     /// * `sample_rate` - The sample rate in samples per second
+    /// * `padding` - Any additional number of samples to use as padding
     ///
     /// # Safety
     ///
@@ -289,11 +293,18 @@ impl<T: Copy + Clone + Default> BMRingBuf<T> {
     /// * This will panic if the resulting capacity is greater than `(std::usize::MAX/2)+1`
     ///
     /// [`BMRingBuf`]: struct.BMRingBuf.html
-    pub unsafe fn set_capacity_from_ms_uninit(&mut self, milliseconds: f64, sample_rate: f64) {
+    pub unsafe fn set_capacity_from_ms_uninit(
+        &mut self,
+        milliseconds: f64,
+        sample_rate: f64,
+        padding: usize,
+    ) {
         assert!(milliseconds >= 0.0);
         assert!(sample_rate >= 0.0);
 
-        self.set_capacity_uninit((milliseconds * MS_TO_SEC_RATIO * sample_rate).ceil() as usize);
+        self.set_capacity_uninit(
+            (milliseconds * MS_TO_SEC_RATIO * sample_rate).ceil() as usize + padding,
+        );
     }
 
     /// Clears all values in the ring buffer to the default value.
