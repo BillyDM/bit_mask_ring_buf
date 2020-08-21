@@ -241,17 +241,10 @@ impl<T: Copy + Clone + Default> BMRingBuf<T> {
     /// * This will panic if `capacity > (std::usize::MAX/2)+1`
     pub unsafe fn set_capacity_uninit(&mut self, capacity: usize) {
         let capacity = next_pow_of_2(capacity);
-
-        if capacity != self.vec.len() {
-            if capacity < self.vec.len() {
-                // If capacity is less than the current capacity, simply truncate.
-                self.vec.resize(capacity, Default::default());
-            } else {
-                self.vec.reserve_exact(capacity - self.vec.len());
-                self.vec.set_len(capacity);
-            }
-            self.mask = (self.vec.len() as isize) - 1;
-        }
+        self.vec.clear();
+        self.vec.reserve_exact(capacity);
+        self.vec.set_len(capacity);
+        self.mask = (self.vec.len() as isize) - 1;
     }
 
     /// Sets the capacity of the ring buffer to hold at least a number of
