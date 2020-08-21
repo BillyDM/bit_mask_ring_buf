@@ -224,8 +224,8 @@ impl<T: Copy + Clone + Default> BMRingBuf<T> {
         self.mask = (self.vec.len() as isize) - 1;
     }
 
-    /// Sets the capacity of the ring buffer without initializing data when the new
-    /// capacity is larger. The actual capacity will be set to the next highest power
+    /// Sets the capacity of the ring buffer without initializing data.
+    /// The actual capacity will be set to the next highest power
     /// of 2 if `capacity` is not already a power of 2.
     /// The capacity will be set to 2 if `capacity < 2`.
     ///
