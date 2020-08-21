@@ -211,7 +211,7 @@ impl<T: Copy + Clone + Default> BMRingBuf<T> {
 
     /// Sets the capacity of the ring buffer. The actual capacity will be set
     /// to the next highest power of 2 if `capacity` is not already a power of 2.
-    /// This will also clear all values to the default value.
+    /// All values will be cleared to the default value.
     /// The capacity will be set to 2 if `capacity < 2`.
     ///
     /// # Panics
@@ -224,10 +224,10 @@ impl<T: Copy + Clone + Default> BMRingBuf<T> {
         self.mask = (self.vec.len() as isize) - 1;
     }
 
-    /// Sets the capacity of the ring buffer without initializing data.
-    /// The actual capacity will be set to the next highest power of 2 if
-    /// `capacity` is not already a power of 2. The capacity will be set to
-    /// 2 if `capacity < 2`.
+    /// Sets the capacity of the ring buffer without initializing data when the new
+    /// capacity is larger. The actual capacity will be set to the next highest power
+    /// of 2 if `capacity` is not already a power of 2.
+    /// The capacity will be set to 2 if `capacity < 2`.
     ///
     /// # Safety
     ///
@@ -241,9 +241,17 @@ impl<T: Copy + Clone + Default> BMRingBuf<T> {
     /// * This will panic if `capacity > (std::usize::MAX/2)+1`
     pub unsafe fn set_capacity_uninit(&mut self, capacity: usize) {
         let capacity = next_pow_of_2(capacity);
-        self.vec.reserve_exact(capacity);
-        self.vec.set_len(capacity);
-        self.mask = (self.vec.len() as isize) - 1;
+
+        if capacity != self.vec.len() {
+            if capacity < self.vec.len() {
+                // If capacity is less than the current capacity, simply truncate.
+                self.vec.resize(capacity, Default::default());
+            } else {
+                self.vec.reserve_exact(capacity - self.vec.len());
+                self.vec.set_len(capacity);
+            }
+            self.mask = (self.vec.len() as isize) - 1;
+        }
     }
 
     /// Sets the capacity of the ring buffer to hold at least a number of
@@ -267,7 +275,8 @@ impl<T: Copy + Clone + Default> BMRingBuf<T> {
         assert!(milliseconds >= 0.0);
         assert!(sample_rate >= 0.0);
 
-        self.set_capacity((milliseconds * MS_TO_SEC_RATIO * sample_rate).ceil() as usize + padding);
+        let capacity = (milliseconds * MS_TO_SEC_RATIO * sample_rate).ceil() as usize + padding;
+        self.set_capacity(capacity);
     }
 
     /// Creates a new [`BMRingBuf`] with a capacity that holds at least a number of
@@ -302,9 +311,8 @@ impl<T: Copy + Clone + Default> BMRingBuf<T> {
         assert!(milliseconds >= 0.0);
         assert!(sample_rate >= 0.0);
 
-        self.set_capacity_uninit(
-            (milliseconds * MS_TO_SEC_RATIO * sample_rate).ceil() as usize + padding,
-        );
+        let capacity = (milliseconds * MS_TO_SEC_RATIO * sample_rate).ceil() as usize + padding;
+        self.set_capacity_uninit(capacity);
     }
 
     /// Clears all values in the ring buffer to the default value.
