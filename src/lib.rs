@@ -73,10 +73,10 @@
 //! assert!((rb.lin_interp_f64(3.75) - 1.5).abs() <= f64::EPSILON);
 //! ```
 
-mod referenced;
 mod lin_interp;
-pub use referenced::BMRingBufRef;
+mod referenced;
 pub use lin_interp::*;
+pub use referenced::BMRingBufRef;
 
 /// Returns the next highest power of 2 if `n` is not already a power of 2.
 /// This will return `2` if `n < 2`.
