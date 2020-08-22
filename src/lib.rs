@@ -10,7 +10,7 @@
 //! ## Installation
 //! Add `bit_mask_ring_buf` as a dependency in your `Cargo.toml`:
 //! ```toml
-//! bit_mask_ring_buf = 0.3
+//! bit_mask_ring_buf = 0.4
 //! ```
 //!
 //! ## Example
@@ -209,9 +209,31 @@ impl<T: Copy + Clone + Default> BMRingBuf<T> {
         new_self
     }
 
-    /// Sets the capacity of the ring buffer. The actual capacity will be set
-    /// to the next highest power of 2 if `capacity` is not already a power of 2.
-    /// All values will be cleared to the default value.
+    /// Sets the capacity of the ring buffer while clearing all values to the default value.
+    ///
+    /// The actual capacity will be set to the next highest power of 2 if `capacity`
+    /// is not already a power of 2.
+    /// The capacity will be set to 2 if `capacity < 2`.
+    ///
+    /// # Panics
+    ///
+    /// * This will panic if this tries to allocate more than `isize::MAX` bytes
+    /// * This will panic if `capacity > (std::usize::MAX/2)+1`
+    pub fn clear_set_capacity(&mut self, capacity: usize) {
+        self.vec.clear();
+        self.vec.resize(next_pow_of_2(capacity), Default::default());
+        self.mask = (self.vec.len() as isize) - 1;
+    }
+
+    /// Sets the capacity of the ring buffer.
+    ///
+    /// * If the resulting capacity is less than the current capacity, then the data
+    /// will be truncated.
+    /// * If the resulting capacity is larger than the current capacity, then all newly
+    /// allocated elements appended to the end will be initialized with the default value.
+    ///
+    /// The actual capacity will be set to the next highest power of 2 if `capacity`
+    /// is not already a power of 2.
     /// The capacity will be set to 2 if `capacity < 2`.
     ///
     /// # Panics
@@ -219,15 +241,20 @@ impl<T: Copy + Clone + Default> BMRingBuf<T> {
     /// * This will panic if this tries to allocate more than `isize::MAX` bytes
     /// * This will panic if `capacity > (std::usize::MAX/2)+1`
     pub fn set_capacity(&mut self, capacity: usize) {
-        self.vec.clear();
-        self.vec.resize(next_pow_of_2(capacity), Default::default());
-        self.mask = (self.vec.len() as isize) - 1;
+        let capacity = next_pow_of_2(capacity);
+
+        if capacity != self.vec.len() {
+            self.vec.resize(capacity, Default::default());
+            self.mask = (self.vec.len() as isize) - 1;
+        }
     }
 
-    /// Sets the capacity of the ring buffer without initializing data.
-    /// The actual capacity will be set to the next highest power
-    /// of 2 if `capacity` is not already a power of 2.
-    /// The capacity will be set to 2 if `capacity < 2`.
+    /// Sets the capacity of the ring buffer without initializing any newly allocated data.
+    ///
+    /// * If the resulting capacity is less than the current capacity, then the data
+    /// will be truncated.
+    /// * If the resulting capacity is larger than the current capacity, then all newly
+    /// allocated elements appended to the end will be unitialized.
     ///
     /// # Safety
     ///
@@ -241,16 +268,60 @@ impl<T: Copy + Clone + Default> BMRingBuf<T> {
     /// * This will panic if `capacity > (std::usize::MAX/2)+1`
     pub unsafe fn set_capacity_uninit(&mut self, capacity: usize) {
         let capacity = next_pow_of_2(capacity);
-        self.vec.clear();
-        self.vec.reserve_exact(capacity);
-        self.vec.set_len(capacity);
-        self.mask = (self.vec.len() as isize) - 1;
+
+        if capacity != self.vec.len() {
+            if capacity < self.vec.len() {
+                // Truncate data.
+                self.vec.resize(capacity, Default::default());
+            } else {
+                // Extend without initializing.
+                self.vec.reserve_exact(capacity - self.vec.len());
+                self.vec.set_len(capacity);
+            }
+            self.mask = (self.vec.len() as isize) - 1;
+        }
     }
 
     /// Sets the capacity of the ring buffer to hold at least a number of
-    /// frames/samples in a given time peroid. The actual capacity will be set to the
+    /// frames/samples in a given time peroid while clearing all values to the default value.
+    ///
+    /// The actual capacity will be set to the lowest power of 2 that can hold that many values.
+    /// The capacity will be set to 2 if the resulting capacity is less than 2.
+    ///
+    /// * `milliseconds` - The time period in milliseconds
+    /// * `sample_rate` - The sample rate in samples per second
+    /// * `padding` - Any additional number of samples to use as padding
+    ///
+    /// # Panics
+    ///
+    /// * This will panic if either `milliseconds` or `sample_rate` is less than 0
+    /// * This will panic if this tries to allocate more than `isize::MAX` bytes
+    /// * This will panic if the resulting capacity is greater than `(std::usize::MAX/2)+1`
+    ///
+    /// [`BMRingBuf`]: struct.BMRingBuf.html
+    pub fn clear_set_capacity_from_ms(
+        &mut self,
+        milliseconds: f64,
+        sample_rate: f64,
+        padding: usize,
+    ) {
+        assert!(milliseconds >= 0.0);
+        assert!(sample_rate >= 0.0);
+
+        let capacity = (milliseconds * MS_TO_SEC_RATIO * sample_rate).ceil() as usize + padding;
+        self.clear_set_capacity(capacity);
+    }
+
+    /// Sets the capacity of the ring buffer to hold at least a number of
+    /// frames/samples in a given time peroid.
+    ///
+    /// * If the resulting capacity is less than the current capacity, then the data
+    /// will be truncated.
+    /// * If the resulting capacity is larger than the current capacity, then all newly
+    /// allocated elements appended to the end will be initialized with the default value.
+    ///
+    /// The actual capacity will be set to the
     /// lowest power of 2 that can hold that many values.
-    /// This will also clear all values to the default value.
     /// The capacity will be set to 2 if the resulting capacity is less than 2.
     ///
     /// * `milliseconds` - The time period in milliseconds
@@ -272,9 +343,16 @@ impl<T: Copy + Clone + Default> BMRingBuf<T> {
         self.set_capacity(capacity);
     }
 
-    /// Creates a new [`BMRingBuf`] with a capacity that holds at least a number of
+    /// Sets the capacity of the ring buffer to hold at least a number of
     /// frames/samples in a given time peroid. Any newly allocated data will not be
-    /// initialized. The actual capacity will be set to the lowest power of 2 that
+    /// initialized.
+    ///
+    /// * If the resulting capacity is less than the current capacity, then the data
+    /// will be truncated.
+    /// * If the resulting capacity is larger than the current capacity, then all newly
+    /// allocated elements appended to the end will be unitialized.
+    ///
+    /// The actual capacity will be set to the lowest power of 2 that
     /// can hold that many values. The capacity will be set to 2 if the resulting
     /// capacity is less than 2.
     ///
@@ -687,6 +765,55 @@ mod tests {
 
             assert_eq!(ring_buf.vec.len(), 4);
         }
+    }
+
+    #[test]
+    fn bit_mask_ring_buf_clear_set_capacity() {
+        let mut ring_buf = BMRingBuf::<f32>::from_capacity(4);
+        ring_buf[0] = 1.0;
+        ring_buf[1] = 2.0;
+        ring_buf[2] = 3.0;
+        ring_buf[3] = 4.0;
+
+        ring_buf.clear_set_capacity(8);
+        assert_eq!(ring_buf.vec.as_slice(), &[0.0; 8]);
+    }
+
+    #[test]
+    fn bit_mask_ring_buf_set_capacity() {
+        let mut ring_buf = BMRingBuf::<f32>::from_capacity(4);
+        ring_buf[0] = 1.0;
+        ring_buf[1] = 2.0;
+        ring_buf[2] = 3.0;
+        ring_buf[3] = 4.0;
+
+        ring_buf.set_capacity(1);
+        assert_eq!(ring_buf.vec.as_slice(), &[1.0, 2.0]);
+
+        ring_buf.set_capacity(4);
+        assert_eq!(ring_buf.vec.as_slice(), &[1.0, 2.0, 0.0, 0.0]);
+    }
+
+    #[test]
+    fn bit_mask_ring_buf_set_capacity_uninit() {
+        let mut ring_buf = BMRingBuf::<f32>::from_capacity(4);
+        ring_buf[0] = 1.0;
+        ring_buf[1] = 2.0;
+        ring_buf[2] = 3.0;
+        ring_buf[3] = 4.0;
+
+        unsafe {
+            ring_buf.set_capacity_uninit(1);
+        }
+
+        assert_eq!(ring_buf.vec.as_slice(), &[1.0, 2.0]);
+        assert_eq!(ring_buf.vec.len(), 2);
+
+        unsafe {
+            ring_buf.set_capacity_uninit(4);
+        }
+
+        assert_eq!(ring_buf.vec.len(), 4);
     }
 
     #[test]

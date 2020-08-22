@@ -11,7 +11,7 @@ This crate has no consumer/producer logic, and is meant to be used as a raw data
 ## Installation
 Add `bit_mask_ring_buf` as a dependency in your `Cargo.toml`:
 ```toml
-bit_mask_ring_buf = 0.3
+bit_mask_ring_buf = 0.4
 ```
 
 ## Example
