@@ -62,6 +62,16 @@ assert_eq!(rb_ref[0], 5);
 assert_eq!(rb_ref[1], 1);
 assert_eq!(rb_ref[2], 2);
 assert_eq!(rb_ref[3], 3);
+
+// Linear interpolation on floating point buffers
+let mut rb = BMRingBuf::<f64>::from_capacity(4);
+rb[0] = 0.0;
+rb[1] = 2.0;
+rb[2] = 4.0;
+rb[3] = 6.0;
+assert!((rb.lin_interp_f64(1.0) - 2.0).abs() <= f64::EPSILON);
+assert!((rb.lin_interp_f64(1.25) - 2.5).abs() <= f64::EPSILON);
+assert!((rb.lin_interp_f64(3.75) - 1.5).abs() <= f64::EPSILON);
 ```
 
 [documentation]: https://docs.rs/bit_mask_ring_buf/
