@@ -7,6 +7,10 @@
 //! This crate has no consumer/producer logic, and is meant to be used as a raw data structure
 //! or a base for other data structures.
 //!
+//! If your use case needs a buffer with a length that is not a power of 2, and the performance
+//! of indexing individual elements one at a time does not matter, then take a look at my
+//! crate `slice_ring_buf`: https://crates.io/crates/slice_ring_buf.
+//!
 //! ## Installation
 //! Add `bit_mask_ring_buf` as a dependency in your `Cargo.toml`:
 //! ```toml
@@ -25,35 +29,39 @@
 //! let mut rb = BMRingBuf::<u32>::from_capacity(3);
 //! assert_eq!(rb.capacity(), 4);
 //!
-//! // Read/write to buffer by indexing
+//! // Read/write to buffer by indexing with an `isize`.
 //! rb[0] = 0;
 //! rb[1] = 1;
 //! rb[2] = 2;
 //! rb[3] = 3;
 //!
-//! // Cheaply wrap when reading/writing outside of bounds
+//! // Cheaply wrap when reading/writing outside of bounds.
 //! assert_eq!(rb[-1], 3);
 //! assert_eq!(rb[10], 2);
 //!
-//! // Memcpy into slices at arbitrary points and length
+//! // Memcpy into slices at arbitrary `isize` indexes
+//! // and length.
 //! let mut read_buffer = [0u32; 7];
 //! rb.read_into(&mut read_buffer, 2);
 //! assert_eq!(read_buffer, [2, 3, 0, 1, 2, 3, 0]);
 //!
-//! // Memcpy data from a slice into the ring buffer. Only
-//! // the latest data will be copied.
+//! // Memcpy data from a slice into the ring buffer at
+//! // arbitrary `isize` indexes. Earlier data will not be
+//! // copied if it will be overwritten by newer data,
+//! // avoiding unecessary memcpy's. The correct placement
+//! // of the newer data will still be preserved.
 //! rb.write_latest(&[0, 2, 3, 4, 1], 0);
 //! assert_eq!(rb[0], 1);
 //! assert_eq!(rb[1], 2);
 //! assert_eq!(rb[2], 3);
 //! assert_eq!(rb[3], 4);
 //!
-//! // Read/write by retrieving slices directly
+//! // Read/write by retrieving slices directly.
 //! let (s1, s2) = rb.as_slices_len(1, 4);
 //! assert_eq!(s1, &[2, 3, 4]);
 //! assert_eq!(s2, &[1]);
 //!
-//! // Aligned/stack data may also be used
+//! // Aligned/stack data may also be used.
 //! let mut stack_data = [0u32, 1, 2, 3];
 //! let mut rb_ref = BMRingBufRef::new(&mut stack_data);
 //! rb_ref[-4] = 5;
@@ -62,7 +70,7 @@
 //! assert_eq!(rb_ref[2], 2);
 //! assert_eq!(rb_ref[3], 3);
 //!
-//! // Linear interpolation on floating point buffers
+//! // Get linear interpolation on floating point buffers.
 //! let mut rb = BMRingBuf::<f64>::from_capacity(4);
 //! rb[0] = 0.0;
 //! rb[1] = 2.0;
@@ -675,12 +683,12 @@ impl<T: Copy + Clone + Default> BMRingBuf<T> {
     /// * `second` - This second slice to copy data from.
     /// * `start` - The index of the ring buffer to start copying from.
     pub fn write_latest_2(&mut self, first: &[T], second: &[T], start: isize) {
-        if first.len() + second.len() <= self.capacity() {
+        if first.len() + second.len() <= self.vec.len() {
             // All data from both slices need to be copied.
             self.write_latest(first, start);
-        } else if second.len() < self.capacity() {
+        } else if second.len() < self.vec.len() {
             // Only data from the end part of first and all of second needs to be copied.
-            let first_end_part_len = self.capacity() - second.len();
+            let first_end_part_len = self.vec.len() - second.len();
             let first_end_part_start = first.len() - first_end_part_len;
             let first_end_part = &first[first_end_part_start..];
 

@@ -325,12 +325,12 @@ impl<'a, T: Copy + Clone + Default> BMRingBufRef<'a, T> {
     /// * `second` - This second slice to copy data from.
     /// * `start` - The index of the ring buffer to start copying from.
     pub fn write_latest_2(&mut self, first: &[T], second: &[T], start: isize) {
-        if first.len() + second.len() <= self.capacity() {
+        if first.len() + second.len() <= self.data.len() {
             // All data from both slices need to be copied.
             self.write_latest(first, start);
-        } else if second.len() < self.capacity() {
+        } else if second.len() < self.data.len() {
             // Only data from the end part of first and all of second needs to be copied.
-            let first_end_part_len = self.capacity() - second.len();
+            let first_end_part_len = self.data.len() - second.len();
             let first_end_part_start = first.len() - first_end_part_len;
             let first_end_part = &first[first_end_part_start..];
 
