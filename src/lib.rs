@@ -1071,6 +1071,97 @@ impl<T: Copy + Clone + Default> BMRingBuf<T> {
     pub fn constrain(&self, i: isize) -> isize {
         i & self.mask
     }
+
+    /// Returns all the data in the buffer. The starting index will
+    /// always be `0`.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use bit_mask_ring_buf::BMRingBuf;
+    /// let mut rb = BMRingBuf::<u32>::from_capacity(4);
+    /// rb[0] = 1;
+    /// rb[1] = 2;
+    /// rb[2] = 3;
+    /// rb[3] = 4;
+    ///
+    /// let raw_data = rb.raw_data();
+    /// assert_eq!(raw_data, &[1u32, 2, 3, 4]);
+    /// ```
+    pub fn raw_data(&self) -> &[T] {
+        &self.vec[..]
+    }
+
+    /// Returns all the data in the buffer as mutable. The starting
+    /// index will always be `0`.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use bit_mask_ring_buf::BMRingBuf;
+    /// let mut rb = BMRingBuf::<u32>::from_capacity(4);
+    /// rb[0] = 1;
+    /// rb[1] = 2;
+    /// rb[2] = 3;
+    /// rb[3] = 4;
+    ///
+    /// let raw_data = rb.raw_data_mut();
+    /// assert_eq!(raw_data, &mut [1u32, 2, 3, 4]);
+    /// ```
+    pub fn raw_data_mut(&mut self) -> &mut [T] {
+        &mut self.vec[..]
+    }
+
+    /// Returns the element at the index of type `usize`.
+    ///
+    /// Please note this does NOT wrap around. This is equivalent to
+    /// indexing a normal `Vec`.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use bit_mask_ring_buf::BMRingBuf;
+    /// let mut rb = BMRingBuf::<u32>::from_capacity(4);
+    /// rb[0] = 1;
+    /// rb[3] = 4;
+    ///
+    /// assert_eq!(*rb.raw_at(0), 1);
+    /// assert_eq!(*rb.raw_at(3), 4);
+    ///
+    /// // These will panic!
+    /// // assert_eq!(*rb.raw_at(-3), 2);
+    /// // assert_eq!(*rb.raw_at(4), 1);
+    /// ```
+    #[inline]
+    pub fn raw_at(&self, i: usize) -> &T {
+        &self.vec[i]
+    }
+
+    /// Returns the element at the index of type `usize` as mutable.
+    ///
+    /// Please note this does NOT wrap around. This is equivalent to
+    /// indexing a normal `Vec`.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use bit_mask_ring_buf::BMRingBuf;
+    /// let mut rb = BMRingBuf::<u32>::from_capacity(4);
+    /// 
+    /// *rb.raw_at_mut(0) = 1;
+    /// *rb.raw_at_mut(3) = 4;
+    ///
+    /// assert_eq!(rb[0], 1);
+    /// assert_eq!(rb[3], 4);
+    ///
+    /// // These will panic!
+    /// // *rb.raw_at_mut(-3) = 2;
+    /// // *rb.raw_at_mut(4) = 1;
+    /// ```
+    #[inline]
+    pub fn raw_at_mut(&mut self, i: usize) -> &mut T {
+        &mut self.vec[i]
+    }
 }
 
 impl<T: Copy + Clone + Default> std::ops::Index<isize> for BMRingBuf<T> {
