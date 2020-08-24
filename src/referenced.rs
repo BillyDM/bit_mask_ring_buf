@@ -24,6 +24,22 @@ impl<'a, T: Copy + Clone + Default> BMRingBufRef<'a, T> {
     /// See [`std::ptr::offset`] for more information when indexing very large buffers
     /// on 32-bit and 16-bit platforms.
     ///
+    /// # Example
+    ///
+    /// ```
+    /// use bit_mask_ring_buf::BMRingBufRef;
+    ///
+    /// let mut data = [1u32, 2, 3, 4];
+    /// let rb = BMRingBufRef::new(&mut data[..]);
+    ///
+    /// assert_eq!(rb.capacity(), 4);
+    ///
+    /// assert_eq!(rb[0], 1);
+    /// assert_eq!(rb[1], 2);
+    /// assert_eq!(rb[2], 3);
+    /// assert_eq!(rb[3], 4);
+    /// ```
+    ///
     /// # Panics
     ///
     /// * This will panic if the length of the given slice is not a power of 2
@@ -42,6 +58,22 @@ impl<'a, T: Copy + Clone + Default> BMRingBufRef<'a, T> {
     }
 
     /// Clears all values in the ring buffer to the default value.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use bit_mask_ring_buf::BMRingBufRef;
+    ///
+    /// let mut data = [1u32, 2, 3, 4];
+    /// let mut rb = BMRingBufRef::new(&mut data[..]);
+    ///
+    /// rb.clear();
+    ///
+    /// assert_eq!(rb[0], 0);
+    /// assert_eq!(rb[1], 0);
+    /// assert_eq!(rb[2], 0);
+    /// assert_eq!(rb[3], 0);
+    /// ```
     pub fn clear(&mut self) {
         for n in self.data.iter_mut() {
             *n = Default::default();
@@ -62,6 +94,23 @@ impl<'a, T: Copy + Clone + Default> BMRingBufRef<'a, T> {
     /// * The second slice is the second contiguous chunk of data. This may
     /// or may not be empty depending if the buffer needed to wrap around to the beginning of
     /// its internal memory layout.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use bit_mask_ring_buf::BMRingBufRef;
+    ///
+    /// let mut data = [1u32, 2, 3, 4];
+    /// let mut rb = BMRingBufRef::new(&mut data[..]);
+    ///
+    /// let (s1, s2) = rb.as_slices(-4);
+    /// assert_eq!(s1, &[1, 2, 3, 4]);
+    /// assert_eq!(s2, &[]);
+    ///
+    /// let (s1, s2) = rb.as_slices(3);
+    /// assert_eq!(s1, &[4]);
+    /// assert_eq!(s2, &[1, 2, 3]);
+    /// ```
     pub fn as_slices(&self, start: isize) -> (&[T], &[T]) {
         let start = self.constrain(start) as usize;
 
@@ -97,6 +146,23 @@ impl<'a, T: Copy + Clone + Default> BMRingBufRef<'a, T> {
     /// * The second slice is the second contiguous chunk of data. This may
     /// or may not be empty depending if the buffer needed to wrap around to the beginning of
     /// its internal memory layout.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use bit_mask_ring_buf::BMRingBufRef;
+    ///
+    /// let mut data = [1u32, 2, 3, 4];
+    /// let mut rb = BMRingBufRef::new(&mut data[..]);
+    ///
+    /// let (s1, s2) = rb.as_slices_len(-4, 3);
+    /// assert_eq!(s1, &[1, 2, 3]);
+    /// assert_eq!(s2, &[]);
+    ///
+    /// let (s1, s2) = rb.as_slices_len(3, 5);
+    /// assert_eq!(s1, &[4]);
+    /// assert_eq!(s2, &[1, 2, 3]);
+    /// ```
     pub fn as_slices_len(&self, start: isize, len: usize) -> (&[T], &[T]) {
         let start = self.constrain(start) as usize;
 
@@ -138,6 +204,23 @@ impl<'a, T: Copy + Clone + Default> BMRingBufRef<'a, T> {
     /// * The second slice is the second contiguous chunk of data. This may
     /// or may not be empty depending if the buffer needed to wrap around to the beginning of
     /// its internal memory layout.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use bit_mask_ring_buf::BMRingBufRef;
+    ///
+    /// let mut data = [1u32, 2, 3, 4];
+    /// let mut rb = BMRingBufRef::new(&mut data[..]);
+    ///
+    /// let (s1, s2) = rb.as_mut_slices(-4);
+    /// assert_eq!(s1, &mut [1, 2, 3, 4]);
+    /// assert_eq!(s2, &mut []);
+    ///
+    /// let (s1, s2) = rb.as_mut_slices(3);
+    /// assert_eq!(s1, &mut [4]);
+    /// assert_eq!(s2, &mut [1, 2, 3]);
+    /// ```
     pub fn as_mut_slices(&mut self, start: isize) -> (&mut [T], &mut [T]) {
         let start = self.constrain(start) as usize;
 
@@ -176,6 +259,23 @@ impl<'a, T: Copy + Clone + Default> BMRingBufRef<'a, T> {
     /// * The second slice is the second contiguous chunk of data. This may
     /// or may not be empty depending if the buffer needed to wrap around to the beginning of
     /// its internal memory layout.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use bit_mask_ring_buf::BMRingBufRef;
+    ///
+    /// let mut data = [1u32, 2, 3, 4];
+    /// let mut rb = BMRingBufRef::new(&mut data[..]);
+    ///
+    /// let (s1, s2) = rb.as_mut_slices_len(-4, 3);
+    /// assert_eq!(s1, &mut [1, 2, 3]);
+    /// assert_eq!(s2, &mut []);
+    ///
+    /// let (s1, s2) = rb.as_mut_slices_len(3, 5);
+    /// assert_eq!(s1, &mut [4]);
+    /// assert_eq!(s2, &mut [1, 2, 3]);
+    /// ```
     pub fn as_mut_slices_len(&mut self, start: isize, len: usize) -> (&mut [T], &mut [T]) {
         let start = self.constrain(start) as usize;
 
@@ -218,6 +318,23 @@ impl<'a, T: Copy + Clone + Default> BMRingBufRef<'a, T> {
     ///
     /// * `slice` - This slice to copy the data into.
     /// * `start` - The index of the ring buffer to start copying from.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use bit_mask_ring_buf::BMRingBufRef;
+    ///
+    /// let mut data = [1u32, 2, 3, 4];
+    /// let mut rb = BMRingBufRef::new(&mut data[..]);
+    ///
+    /// let mut read_buf = [0u32; 3];
+    /// rb.read_into(&mut read_buf[..], -3);
+    /// assert_eq!(read_buf, [2, 3, 4]);
+    ///
+    /// let mut read_buf = [0u32; 9];
+    /// rb.read_into(&mut read_buf[..], 2);
+    /// assert_eq!(read_buf, [3, 4, 1, 2, 3, 4, 1, 2, 3]);
+    /// ```
     pub fn read_into(&self, slice: &mut [T], start: isize) {
         let start = self.constrain(start) as usize;
 
@@ -261,11 +378,37 @@ impl<'a, T: Copy + Clone + Default> BMRingBufRef<'a, T> {
     }
 
     /// Copies data from the given slice into the ring buffer starting from
-    /// the index `start`. If the length of `slice` is larger than the
-    /// capacity of the ring buffer, then only the latest data will be copied.
+    /// the index `start`.
+    ///
+    /// Earlier data will not be copied if it will be
+    /// overwritten by newer data, avoiding unecessary memcpy's. The correct
+    /// placement of the newer data will still be preserved.
     ///
     /// * `slice` - This slice to copy data from.
     /// * `start` - The index of the ring buffer to start copying from.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use bit_mask_ring_buf::BMRingBufRef;
+    ///
+    /// let mut data = [0u32; 4];
+    /// let mut rb = BMRingBufRef::new(&mut data[..]);
+    ///
+    /// let input = [1u32, 2, 3];
+    /// rb.write_latest(&input[..], -3);
+    /// assert_eq!(rb[0], 0);
+    /// assert_eq!(rb[1], 1);
+    /// assert_eq!(rb[2], 2);
+    /// assert_eq!(rb[3], 3);
+    ///
+    /// let input = [1u32, 2, 3, 4, 5, 6, 7, 8, 9];
+    /// rb.write_latest(&input[..], 2);
+    /// assert_eq!(rb[0], 7);
+    /// assert_eq!(rb[1], 8);
+    /// assert_eq!(rb[2], 9);
+    /// assert_eq!(rb[3], 6);
+    /// ```
     pub fn write_latest(&mut self, slice: &[T], start: isize) {
         // If slice is longer than self.data, retreive only the latest portion
         let (slice, start_i) = if slice.len() > self.data.len() {
@@ -316,14 +459,46 @@ impl<'a, T: Copy + Clone + Default> BMRingBufRef<'a, T> {
 
     /// Copies data from two given slices into the ring buffer starting from
     /// the index `start`. The `first` slice will be copied first then `second`
-    /// will be copied next. If the length of the slices is larger than the
-    /// capacity of the ring buffer, then only the latest data will be copied.
-    /// Data in the first slice will not be copied if it will be overwritten by
-    /// the second slice, reducing the amount of unnecessary copying.
+    /// will be copied next.
+    ///
+    /// Earlier data will not be copied if it will be
+    /// overwritten by newer data, avoiding unecessary memcpy's. The correct
+    /// placement of the newer data will still be preserved.
     ///
     /// * `first` - This first slice to copy data from.
     /// * `second` - This second slice to copy data from.
     /// * `start` - The index of the ring buffer to start copying from.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use bit_mask_ring_buf::{BMRingBuf, BMRingBufRef};
+    ///
+    /// let mut input_rb = BMRingBuf::<u32>::from_capacity(4);
+    /// input_rb[0] = 1;
+    /// input_rb[1] = 2;
+    /// input_rb[2] = 3;
+    /// input_rb[3] = 4;
+    ///
+    /// let mut output_data = [0u32; 4];
+    /// let mut output_rb = BMRingBufRef::new(&mut output_data[..]);
+    /// // s1 == &[1, 2], s2 == &[]
+    /// let (s1, s2) = input_rb.as_slices_len(0, 2);
+    /// output_rb.write_latest_2(s1, s2, -3);
+    /// assert_eq!(output_rb[0], 0);
+    /// assert_eq!(output_rb[1], 1);
+    /// assert_eq!(output_rb[2], 2);
+    /// assert_eq!(output_rb[3], 0);
+    ///
+    /// let mut output_data = [0u32; 2];
+    /// let mut output_rb = BMRingBufRef::new(&mut output_data[..]);
+    /// // s1 == &[4],  s2 == &[1, 2, 3]
+    /// let (s1, s2) = input_rb.as_slices_len(3, 4);
+    /// // rb[1] = 4  ->  rb[0] = 1  ->  rb[1] = 2  ->  rb[0] = 3
+    /// output_rb.write_latest_2(s1, s2, 1);
+    /// assert_eq!(output_rb[0], 3);
+    /// assert_eq!(output_rb[1], 2);
+    /// ```
     pub fn write_latest_2(&mut self, first: &[T], second: &[T], start: isize) {
         if first.len() + second.len() <= self.data.len() {
             // All data from both slices need to be copied.
@@ -342,6 +517,16 @@ impl<'a, T: Copy + Clone + Default> BMRingBufRef<'a, T> {
     }
 
     /// Returns the capacity of the ring buffer.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use bit_mask_ring_buf::BMRingBufRef;
+    /// let mut data = [0u32; 4];
+    /// let mut rb = BMRingBufRef::new(&mut data[..]);
+    ///
+    /// assert_eq!(rb.capacity(), 4);
+    /// ```
     pub fn capacity(&self) -> usize {
         self.data.len()
     }
@@ -349,6 +534,19 @@ impl<'a, T: Copy + Clone + Default> BMRingBufRef<'a, T> {
     /// Returns the actual index of the ring buffer from the given
     /// `i` index. This is cheap due to the ring buffer's bit-masking
     /// algorithm.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use bit_mask_ring_buf::BMRingBufRef;
+    /// let mut data = [0u32; 4];
+    /// let mut rb = BMRingBufRef::new(&mut data[..]);
+    ///
+    /// assert_eq!(rb.constrain(2), 2);
+    /// assert_eq!(rb.constrain(4), 0);
+    /// assert_eq!(rb.constrain(-3), 1);
+    /// assert_eq!(rb.constrain(7), 3);
+    /// ```
     pub fn constrain(&self, i: isize) -> isize {
         i & self.mask
     }

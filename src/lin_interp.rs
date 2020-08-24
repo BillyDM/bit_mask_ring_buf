@@ -4,7 +4,23 @@ use crate::{BMRingBuf, BMRingBufRef};
 
 impl BMRingBuf<f32> {
     /// Gets the linearly interpolated value between the two values
-    /// at `index.floor()` and `index.floor() + 1`.
+    /// at `index.floor()` and `index.floor() + 1`, where `index`
+    /// is an `f32`.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use bit_mask_ring_buf::BMRingBuf;
+    /// let mut rb = BMRingBuf::<f32>::from_capacity(4);
+    /// rb[0] = 0.0;
+    /// rb[1] = 2.0;
+    /// rb[2] = 4.0;
+    /// rb[3] = 6.0;
+    ///
+    /// assert!((rb.lin_interp_f32(1.0) - 2.0).abs() <= f32::EPSILON);
+    /// assert!((rb.lin_interp_f32(1.25) - 2.5).abs() <= f32::EPSILON);
+    /// assert!((rb.lin_interp_f32(3.75) - 1.5).abs() <= f32::EPSILON);
+    /// ```
     #[inline]
     pub fn lin_interp_f32(&self, index: f32) -> f32 {
         let index_floor = index.floor();
@@ -18,7 +34,23 @@ impl BMRingBuf<f32> {
     }
 
     /// Gets the linearly interpolated value between the two values
-    /// at `index.floor()` and `index.floor() + 1`.
+    /// at `index.floor()` and `index.floor() + 1`, where `index`
+    /// is an `f64`.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use bit_mask_ring_buf::BMRingBuf;
+    /// let mut rb = BMRingBuf::<f32>::from_capacity(4);
+    /// rb[0] = 0.0;
+    /// rb[1] = 2.0;
+    /// rb[2] = 4.0;
+    /// rb[3] = 6.0;
+    ///
+    /// assert!((rb.lin_interp_f64(1.0f64) - 2.0).abs() <= f32::EPSILON);
+    /// assert!((rb.lin_interp_f64(1.25f64) - 2.5).abs() <= f32::EPSILON);
+    /// assert!((rb.lin_interp_f64(3.75f64) - 1.5).abs() <= f32::EPSILON);
+    /// ```
     #[inline]
     pub fn lin_interp_f64(&self, index: f64) -> f32 {
         let index_floor = index.floor();
@@ -34,7 +66,20 @@ impl BMRingBuf<f32> {
 
 impl<'a> BMRingBufRef<'a, f32> {
     /// Gets the linearly interpolated value between the two values
-    /// at `index.floor()` and `index.floor() + 1`.
+    /// at `index.floor()` and `index.floor() + 1`, where `index`
+    /// is an `f32`.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use bit_mask_ring_buf::BMRingBufRef;
+    /// let mut data = [0.0f32, 2.0, 4.0, 6.0];
+    /// let rb = BMRingBufRef::new(&mut data[..]);
+    ///
+    /// assert!((rb.lin_interp_f32(1.0) - 2.0).abs() <= f32::EPSILON);
+    /// assert!((rb.lin_interp_f32(1.25) - 2.5).abs() <= f32::EPSILON);
+    /// assert!((rb.lin_interp_f32(3.75) - 1.5).abs() <= f32::EPSILON);
+    /// ```
     #[inline]
     pub fn lin_interp_f32(&self, index: f32) -> f32 {
         let index_floor = index.floor();
@@ -48,7 +93,20 @@ impl<'a> BMRingBufRef<'a, f32> {
     }
 
     /// Gets the linearly interpolated value between the two values
-    /// at `index.floor()` and `index.floor() + 1`.
+    /// at `index.floor()` and `index.floor() + 1`, where `index`
+    /// is an `f64`.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use bit_mask_ring_buf::BMRingBufRef;
+    /// let mut data = [0.0f32, 2.0, 4.0, 6.0];
+    /// let rb = BMRingBufRef::new(&mut data[..]);
+    ///
+    /// assert!((rb.lin_interp_f64(1.0f64) - 2.0).abs() <= f32::EPSILON);
+    /// assert!((rb.lin_interp_f64(1.25f64) - 2.5).abs() <= f32::EPSILON);
+    /// assert!((rb.lin_interp_f64(3.75f64) - 1.5).abs() <= f32::EPSILON);
+    /// ```
     #[inline]
     pub fn lin_interp_f64(&self, index: f64) -> f32 {
         let index_floor = index.floor();
@@ -64,7 +122,23 @@ impl<'a> BMRingBufRef<'a, f32> {
 
 impl BMRingBuf<f64> {
     /// Gets the linearly interpolated value between the two values
-    /// at `index.floor()` and `index.floor() + 1`.
+    /// at `index.floor()` and `index.floor() + 1`, where `index`
+    /// is an `f32`.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use bit_mask_ring_buf::BMRingBuf;
+    /// let mut rb = BMRingBuf::<f64>::from_capacity(4);
+    /// rb[0] = 0.0;
+    /// rb[1] = 2.0;
+    /// rb[2] = 4.0;
+    /// rb[3] = 6.0;
+    ///
+    /// assert!((rb.lin_interp_f32(1.0f32) - 2.0).abs() <= f64::EPSILON);
+    /// assert!((rb.lin_interp_f32(1.25f32) - 2.5).abs() <= f64::EPSILON);
+    /// assert!((rb.lin_interp_f32(3.75f32) - 1.5).abs() <= f64::EPSILON);
+    /// ```
     #[inline]
     pub fn lin_interp_f32(&self, index: f32) -> f64 {
         let index_floor = index.floor();
@@ -78,7 +152,23 @@ impl BMRingBuf<f64> {
     }
 
     /// Gets the linearly interpolated value between the two values
-    /// at `index.floor()` and `index.floor() + 1`.
+    /// at `index.floor()` and `index.floor() + 1`, where `index`
+    /// is an `f64`.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use bit_mask_ring_buf::BMRingBuf;
+    /// let mut rb = BMRingBuf::<f64>::from_capacity(4);
+    /// rb[0] = 0.0;
+    /// rb[1] = 2.0;
+    /// rb[2] = 4.0;
+    /// rb[3] = 6.0;
+    ///
+    /// assert!((rb.lin_interp_f64(1.0) - 2.0).abs() <= f64::EPSILON);
+    /// assert!((rb.lin_interp_f64(1.25) - 2.5).abs() <= f64::EPSILON);
+    /// assert!((rb.lin_interp_f64(3.75) - 1.5).abs() <= f64::EPSILON);
+    /// ```
     #[inline]
     pub fn lin_interp_f64(&self, index: f64) -> f64 {
         let index_floor = index.floor();
@@ -94,7 +184,20 @@ impl BMRingBuf<f64> {
 
 impl<'a> BMRingBufRef<'a, f64> {
     /// Gets the linearly interpolated value between the two values
-    /// at `index.floor()` and `index.floor() + 1`.
+    /// at `index.floor()` and `index.floor() + 1`, where `index`
+    /// is an `f32`.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use bit_mask_ring_buf::BMRingBufRef;
+    /// let mut data = [0.0f64, 2.0, 4.0, 6.0];
+    /// let rb = BMRingBufRef::new(&mut data[..]);
+    ///
+    /// assert!((rb.lin_interp_f32(1.0f32) - 2.0).abs() <= f64::EPSILON);
+    /// assert!((rb.lin_interp_f32(1.25f32) - 2.5).abs() <= f64::EPSILON);
+    /// assert!((rb.lin_interp_f32(3.75f32) - 1.5).abs() <= f64::EPSILON);
+    /// ```
     #[inline]
     pub fn lin_interp_f32(&self, index: f32) -> f64 {
         let index_floor = index.floor();
@@ -108,7 +211,20 @@ impl<'a> BMRingBufRef<'a, f64> {
     }
 
     /// Gets the linearly interpolated value between the two values
-    /// at `index.floor()` and `index.floor() + 1`.
+    /// at `index.floor()` and `index.floor() + 1`, where `index`
+    /// is an `f64`.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use bit_mask_ring_buf::BMRingBufRef;
+    /// let mut data = [0.0f64, 2.0, 4.0, 6.0];
+    /// let rb = BMRingBufRef::new(&mut data[..]);
+    ///
+    /// assert!((rb.lin_interp_f64(1.0) - 2.0).abs() <= f64::EPSILON);
+    /// assert!((rb.lin_interp_f64(1.25) - 2.5).abs() <= f64::EPSILON);
+    /// assert!((rb.lin_interp_f64(3.75) - 1.5).abs() <= f64::EPSILON);
+    /// ```
     #[inline]
     pub fn lin_interp_f64(&self, index: f64) -> f64 {
         let index_floor = index.floor();
