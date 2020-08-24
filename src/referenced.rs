@@ -604,6 +604,10 @@ impl<'a, T: Copy + Clone + Default> BMRingBufRef<'a, T> {
     /// // assert_eq!(*rb.raw_at(-3), 2);
     /// // assert_eq!(*rb.raw_at(4), 1);
     /// ```
+    ///
+    /// # Panics
+    ///
+    /// * This will panic if `i` is out of bounds of the internal `Vec`.
     #[inline]
     pub fn raw_at(&self, i: usize) -> &T {
         &self.data[i]
@@ -631,6 +635,10 @@ impl<'a, T: Copy + Clone + Default> BMRingBufRef<'a, T> {
     /// // *rb.raw_at_mut(-3) = 2;
     /// // *rb.raw_at_mut(4) = 1;
     /// ```
+    ///
+    /// # Panics
+    ///
+    /// * This will panic if `i` is out of bounds of the internal `Vec`.
     #[inline]
     pub fn raw_at_mut(&mut self, i: usize) -> &mut T {
         &mut self.data[i]

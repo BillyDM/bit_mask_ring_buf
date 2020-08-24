@@ -9,7 +9,7 @@
 //!
 //! If your use case needs a buffer with a length that is not a power of 2, and the performance
 //! of indexing individual elements one at a time does not matter, then take a look at my
-//! crate `slice_ring_buf`: https://crates.io/crates/slice_ring_buf.
+//! crate [`slice_ring_buf`].
 //!
 //! ## Installation
 //! Add `bit_mask_ring_buf` as a dependency in your `Cargo.toml`:
@@ -80,6 +80,8 @@
 //! assert!((rb.lin_interp_f64(1.25) - 2.5).abs() <= f64::EPSILON);
 //! assert!((rb.lin_interp_f64(3.75) - 1.5).abs() <= f64::EPSILON);
 //! ```
+//!
+//! [`slice_ring_buf`]: https://crates.io/crates/slice_ring_buf
 
 mod lin_interp;
 mod referenced;
@@ -1132,6 +1134,10 @@ impl<T: Copy + Clone + Default> BMRingBuf<T> {
     /// // assert_eq!(*rb.raw_at(-3), 2);
     /// // assert_eq!(*rb.raw_at(4), 1);
     /// ```
+    ///
+    /// # Panics
+    ///
+    /// * This will panic if `i` is out of bounds of the internal `Vec`.
     #[inline]
     pub fn raw_at(&self, i: usize) -> &T {
         &self.vec[i]
@@ -1158,6 +1164,10 @@ impl<T: Copy + Clone + Default> BMRingBuf<T> {
     /// // *rb.raw_at_mut(-3) = 2;
     /// // *rb.raw_at_mut(4) = 1;
     /// ```
+    ///
+    /// # Panics
+    ///
+    /// * This will panic if `i` is out of bounds of the internal `Vec`.
     #[inline]
     pub fn raw_at_mut(&mut self, i: usize) -> &mut T {
         &mut self.vec[i]
