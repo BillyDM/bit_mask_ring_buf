@@ -1172,6 +1172,70 @@ impl<T: Copy + Clone + Default> BMRingBuf<T> {
     pub fn raw_at_mut(&mut self, i: usize) -> &mut T {
         &mut self.vec[i]
     }
+
+    /// Returns the element at the index of type `usize` while also
+    /// constraining the index `i`. This is slightly more efficient
+    /// than calling both methods individually.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use bit_mask_ring_buf::BMRingBuf;
+    /// let mut rb = BMRingBuf::<u32>::from_capacity(4);
+    /// rb[0] = 1;
+    /// rb[1] = 2;
+    /// rb[2] = 3;
+    /// rb[3] = 4;
+    ///
+    /// let mut i = -3;
+    /// assert_eq!(*rb.at(&mut i), 2);
+    /// assert_eq!(i, 1);
+    /// ```
+    #[inline]
+    pub fn at(&self, i: &mut isize) -> &T {
+        *i = *i & self.mask;
+
+        // Safe because of the algorithm of bit-masking the index on an array/vec
+        // whose length is a power of 2.
+        //
+        // Both the length of self.vec and the value of self.mask are only modified
+        // in self.set_capacity(). This function makes sure these values are valid.
+        // The constructors also correctly call this function.
+        //
+        // Memory is created and initialized by a Vec, so it is always valid.
+        unsafe { &*self.vec.as_ptr().offset(*i) }
+    }
+
+    /// Returns the element at the index of type `usize` as mutable while also
+    /// constraining the index `i`. This is slightly more efficient
+    /// than calling both methods individually.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use bit_mask_ring_buf::BMRingBuf;
+    /// let mut rb = BMRingBuf::<u32>::from_capacity(4);
+    ///
+    /// let mut i = -3;
+    /// *rb.at_mut(&mut i) = 2;
+    ///
+    /// assert_eq!(rb[1], 2);
+    /// assert_eq!(i, 1);
+    /// ```
+    #[inline]
+    pub fn at_mut(&mut self, i: &mut isize) -> &mut T {
+        *i = *i & self.mask;
+
+        // Safe because of the algorithm of bit-masking the index on an array/vec
+        // whose length is a power of 2.
+        //
+        // Both the length of self.vec and the value of self.mask are only modified
+        // in self.set_capacity(). This function makes sure these values are valid.
+        // The constructors also correctly call this function.
+        //
+        // Memory is created and initialized by a Vec, so it is always valid.
+        unsafe { &mut *self.vec.as_mut_ptr().offset(*i) }
+    }
 }
 
 impl<T: Copy + Clone + Default> std::ops::Index<isize> for BMRingBuf<T> {
