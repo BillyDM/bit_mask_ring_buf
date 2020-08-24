@@ -607,7 +607,7 @@ impl<'a, T: Copy + Clone + Default> BMRingBufRef<'a, T> {
     ///
     /// # Panics
     ///
-    /// * This will panic if `i` is out of bounds of the internal `Vec`.
+    /// * This will panic if `i` is out of bounds of the internal slice.
     #[inline]
     pub fn raw_at(&self, i: usize) -> &T {
         &self.data[i]
@@ -638,7 +638,7 @@ impl<'a, T: Copy + Clone + Default> BMRingBufRef<'a, T> {
     ///
     /// # Panics
     ///
-    /// * This will panic if `i` is out of bounds of the internal `Vec`.
+    /// * This will panic if `i` is out of bounds of the internal slice.
     #[inline]
     pub fn raw_at_mut(&mut self, i: usize) -> &mut T {
         &mut self.data[i]
