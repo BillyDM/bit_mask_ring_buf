@@ -620,7 +620,7 @@ impl<'a, T: Copy + Clone + Default> BMRingBufRef<'a, T> {
     /// use bit_mask_ring_buf::BMRingBufRef;
     /// let mut data = [0u32; 4];
     /// let mut rb = BMRingBufRef::new(&mut data[..]);
-    /// 
+    ///
     /// *rb.raw_at_mut(0) = 1;
     /// *rb.raw_at_mut(3) = 4;
     ///

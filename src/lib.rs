@@ -1147,7 +1147,7 @@ impl<T: Copy + Clone + Default> BMRingBuf<T> {
     /// ```
     /// use bit_mask_ring_buf::BMRingBuf;
     /// let mut rb = BMRingBuf::<u32>::from_capacity(4);
-    /// 
+    ///
     /// *rb.raw_at_mut(0) = 1;
     /// *rb.raw_at_mut(3) = 4;
     ///
