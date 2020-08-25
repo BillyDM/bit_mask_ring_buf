@@ -154,13 +154,10 @@ impl<T: Copy + Clone + Default> BMRingBuf<T> {
     pub fn from_len(len: usize) -> Self {
         let len = next_pow_of_2(len);
 
-        let vec: Vec::<T> = vec![Default::default(); len];
+        let vec: Vec<T> = vec![Default::default(); len];
         let mask = (vec.len() as isize) - 1;
 
-        Self {
-            vec,
-            mask,
-        }
+        Self { vec, mask }
     }
 
     /// Creates a new [`BMRingBuf`] with a length that is at least the given
@@ -207,10 +204,7 @@ impl<T: Copy + Clone + Default> BMRingBuf<T> {
 
         let mask = (vec.len() as isize) - 1;
 
-        Self {
-            vec,
-            mask,
-        }
+        Self { vec, mask }
     }
 
     /// Creates a new [`BMRingBuf`] with a length that is at least the given
@@ -251,10 +245,7 @@ impl<T: Copy + Clone + Default> BMRingBuf<T> {
 
         let mask = (vec.len() as isize) - 1;
 
-        Self {
-            vec,
-            mask,
-        }
+        Self { vec, mask }
     }
 
     /// Creates a new [`BMRingBuf`] with a length that is at least the given
@@ -302,10 +293,7 @@ impl<T: Copy + Clone + Default> BMRingBuf<T> {
 
         let mask = (vec.len() as isize) - 1;
 
-        Self {
-            vec,
-            mask,
-        }
+        Self { vec, mask }
     }
 
     /// Sets the length of the ring buffer while clearing all values to the default value.
