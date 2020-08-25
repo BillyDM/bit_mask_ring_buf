@@ -14,7 +14,7 @@
 //! ## Installation
 //! Add `bit_mask_ring_buf` as a dependency in your `Cargo.toml`:
 //! ```toml
-//! bit_mask_ring_buf = 0.4
+//! bit_mask_ring_buf = 0.5
 //! ```
 //!
 //! ## Example

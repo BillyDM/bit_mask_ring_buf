@@ -13,7 +13,7 @@ If your use case needs a buffer with a length that is not a power of 2, and the 
 ## Installation
 Add `bit_mask_ring_buf` as a dependency in your `Cargo.toml`:
 ```toml
-bit_mask_ring_buf = 0.4
+bit_mask_ring_buf = 0.5
 ```
 
 ## Example
@@ -22,11 +22,11 @@ use bit_mask_ring_buf::{BMRingBuf, BMRingBufRef};
 
 // Create a ring buffer with type u32. The data will be
 // initialized with the default value (0 in this case).
-// The actual capacity will be set to the next highest
-// power of 2 if the given capacity is not already
+// The actual length will be set to the next highest
+// power of 2 if the given length is not already
 // a power of 2.
-let mut rb = BMRingBuf::<u32>::from_capacity(3);
-assert_eq!(rb.capacity(), 4);
+let mut rb = BMRingBuf::<u32>::from_len(3);
+assert_eq!(rb.len(), 4);
 
 // Read/write to buffer by indexing with an `isize`.
 rb[0] = 0;
@@ -70,7 +70,7 @@ assert_eq!(rb_ref[2], 2);
 assert_eq!(rb_ref[3], 3);
 
 // Get linear interpolation on floating point buffers.
-let mut rb = BMRingBuf::<f64>::from_capacity(4);
+let mut rb = BMRingBuf::<f64>::from_len(4);
 rb[0] = 0.0;
 rb[1] = 2.0;
 rb[2] = 4.0;
