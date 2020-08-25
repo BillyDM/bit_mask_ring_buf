@@ -95,6 +95,10 @@ impl<'a, T: Copy + Clone + Default> BMRingBufRef<'a, T> {
     /// or may not be empty depending if the buffer needed to wrap around to the beginning of
     /// its internal memory layout.
     ///
+    /// # Performance
+    ///
+    /// Prefer to use this to manipulate data in bulk over indexing one element at a time.
+    ///
     /// # Example
     ///
     /// ```
@@ -146,6 +150,10 @@ impl<'a, T: Copy + Clone + Default> BMRingBufRef<'a, T> {
     /// * The second slice is the second contiguous chunk of data. This may
     /// or may not be empty depending if the buffer needed to wrap around to the beginning of
     /// its internal memory layout.
+    ///
+    /// # Performance
+    ///
+    /// Prefer to use this to manipulate data in bulk over indexing one element at a time.
     ///
     /// # Example
     ///
@@ -211,6 +219,10 @@ impl<'a, T: Copy + Clone + Default> BMRingBufRef<'a, T> {
     /// * The second slice is the second contiguous chunk of data. This may
     /// or may not be empty depending if the buffer needed to wrap around to the beginning of
     /// its internal memory layout.
+    ///
+    /// # Performance
+    ///
+    /// Prefer to use this to manipulate data in bulk over indexing one element at a time.
     ///
     /// # Example
     ///
@@ -278,6 +290,10 @@ impl<'a, T: Copy + Clone + Default> BMRingBufRef<'a, T> {
     /// or may not be empty depending if the buffer needed to wrap around to the beginning of
     /// its internal memory layout.
     ///
+    /// # Performance
+    ///
+    /// Prefer to use this to manipulate data in bulk over indexing one element at a time.
+    ///
     /// # Example
     ///
     /// ```
@@ -332,6 +348,10 @@ impl<'a, T: Copy + Clone + Default> BMRingBufRef<'a, T> {
     /// * The second slice is the second contiguous chunk of data. This may
     /// or may not be empty depending if the buffer needed to wrap around to the beginning of
     /// its internal memory layout.
+    ///
+    /// # Performance
+    ///
+    /// Prefer to use this to manipulate data in bulk over indexing one element at a time.
     ///
     /// # Example
     ///
@@ -401,6 +421,10 @@ impl<'a, T: Copy + Clone + Default> BMRingBufRef<'a, T> {
     /// or may not be empty depending if the buffer needed to wrap around to the beginning of
     /// its internal memory layout.
     ///
+    /// # Performance
+    ///
+    /// Prefer to use this to manipulate data in bulk over indexing one element at a time.
+    ///
     /// # Example
     ///
     /// ```
@@ -467,6 +491,10 @@ impl<'a, T: Copy + Clone + Default> BMRingBufRef<'a, T> {
     ///
     /// * `slice` - This slice to copy the data into.
     /// * `start` - The index of the ring buffer to start copying from.
+    ///
+    /// # Performance
+    ///
+    /// Prefer to use this to manipulate data in bulk over indexing one element at a time.
     ///
     /// # Example
     ///
@@ -535,6 +563,10 @@ impl<'a, T: Copy + Clone + Default> BMRingBufRef<'a, T> {
     ///
     /// * `slice` - This slice to copy data from.
     /// * `start` - The index of the ring buffer to start copying from.
+    ///
+    /// # Performance
+    ///
+    /// Prefer to use this to manipulate data in bulk over indexing one element at a time.
     ///
     /// # Example
     ///
@@ -618,6 +650,10 @@ impl<'a, T: Copy + Clone + Default> BMRingBufRef<'a, T> {
     /// * `second` - This second slice to copy data from.
     /// * `start` - The index of the ring buffer to start copying from.
     ///
+    /// # Performance
+    ///
+    /// Prefer to use this to manipulate data in bulk over indexing one element at a time.
+    ///
     /// # Example
     ///
     /// ```
@@ -682,7 +718,7 @@ impl<'a, T: Copy + Clone + Default> BMRingBufRef<'a, T> {
 
     /// Returns the actual index of the ring buffer from the given
     /// `i` index. This is cheap due to the ring buffer's bit-masking
-    /// algorithm.
+    /// algorithm. This is useful to keep indexes from growing indefinitely.
     ///
     /// # Example
     ///
@@ -797,6 +833,10 @@ impl<'a, T: Copy + Clone + Default> BMRingBufRef<'a, T> {
     /// constraining the index `i`. This is slightly more efficient
     /// than calling both methods individually.
     ///
+    /// # Performance
+    ///
+    /// Prefer to manipulate data in bulk with methods that return slices.
+    ///
     /// # Example
     ///
     /// ```
@@ -824,6 +864,10 @@ impl<'a, T: Copy + Clone + Default> BMRingBufRef<'a, T> {
     /// Returns the element at the index of type `usize` as mutable while also
     /// constraining the index `i`. This is slightly more efficient
     /// than calling both methods individually.
+    ///
+    /// # Performance
+    ///
+    /// Prefer to manipulate data in bulk with methods that return slices.
     ///
     /// # Example
     ///
