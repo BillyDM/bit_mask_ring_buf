@@ -617,6 +617,80 @@ impl<T: Copy + Clone + Default> BMRingBuf<T> {
         }
     }
 
+    /// Returns two slices of data in the ring buffer
+    /// starting at the index `start` and with length `len`. If `len` is greater
+    /// than the length of the ring buffer, then the buffer's length will be used
+    /// instead, while still preserving the position of the last element.
+    ///
+    /// * `start` - The starting index
+    /// * `len` - The length of data to read. If `len` is greater than the
+    /// length of the ring buffer, then the buffer's length will be used instead, while
+    /// still preserving the position of the last element.
+    ///
+    /// # Returns
+    ///
+    /// * The first slice is the starting chunk of data.
+    /// * The second slice is the second contiguous chunk of data. This may
+    /// or may not be empty depending if the buffer needed to wrap around to the beginning of
+    /// its internal memory layout.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use bit_mask_ring_buf::BMRingBuf;
+    ///
+    /// let mut rb = BMRingBuf::<u32>::from_len(4);
+    /// rb[0] = 1;
+    /// rb[1] = 2;
+    /// rb[2] = 3;
+    /// rb[3] = 4;
+    ///
+    /// let (s1, s2) = rb.as_slices_latest(-4, 3);
+    /// assert_eq!(s1, &[1, 2, 3]);
+    /// assert_eq!(s2, &[]);
+    ///
+    /// let (s1, s2) = rb.as_slices_latest(0, 5);
+    /// assert_eq!(s1, &[2, 3, 4]);
+    /// assert_eq!(s2, &[1]);
+    /// ```
+    pub fn as_slices_latest(&self, start: isize, len: usize) -> (&[T], &[T]) {
+        let mut start = self.constrain(start) as usize;
+
+        // Safe because of the algorithm of bit-masking the index on an array/vec
+        // whose length is a power of 2.
+        //
+        // Both the length of self.vec and the value of self.mask are only modified
+        // in self.set_len(). This function makes sure these values are valid.
+        // The constructors also correctly call this function.
+        //
+        // Memory is created and initialized by a Vec, so it is always valid.
+        unsafe {
+            let self_vec_ptr = self.vec.as_ptr();
+
+            let mut first_portion_len = self.vec.len() - start;
+            if len > first_portion_len {
+                let second_portion_len = if len > self.vec.len() {
+                    let end_index = (start + len) as isize;
+                    start = self.constrain(end_index - self.vec.len() as isize) as usize;
+                    first_portion_len = self.vec.len() - start;
+                    start
+                } else {
+                    std::cmp::min(len - first_portion_len, start)
+                };
+
+                (
+                    &*std::ptr::slice_from_raw_parts(self_vec_ptr.add(start), first_portion_len),
+                    &*std::ptr::slice_from_raw_parts(self_vec_ptr, second_portion_len),
+                )
+            } else {
+                (
+                    &*std::ptr::slice_from_raw_parts(self_vec_ptr.add(start), len),
+                    &[],
+                )
+            }
+        }
+    }
+
     /// Returns two mutable slices that contain all the data in the ring buffer
     /// starting at the index `start`.
     ///
@@ -719,6 +793,83 @@ impl<T: Copy + Clone + Default> BMRingBuf<T> {
             let first_portion_len = self.vec.len() - start;
             if len > first_portion_len {
                 let second_portion_len = std::cmp::min(len - first_portion_len, start);
+                (
+                    &mut *std::ptr::slice_from_raw_parts_mut(
+                        self_vec_ptr.add(start),
+                        first_portion_len,
+                    ),
+                    &mut *std::ptr::slice_from_raw_parts_mut(self_vec_ptr, second_portion_len),
+                )
+            } else {
+                (
+                    &mut *std::ptr::slice_from_raw_parts_mut(self_vec_ptr.add(start), len),
+                    &mut [],
+                )
+            }
+        }
+    }
+
+    /// Returns two mutable slices of data in the ring buffer
+    /// starting at the index `start` and with length `len`. If `len` is greater
+    /// than the length of the ring buffer, then the buffer's length will be used
+    /// instead, while still preserving the position of the last element.
+    ///
+    /// * `start` - The starting index
+    /// * `len` - The length of data to read. If `len` is greater than the
+    /// length of the ring buffer, then the buffer's length will be used instead, while
+    /// still preserving the position of the last element.
+    ///
+    /// # Returns
+    ///
+    /// * The first slice is the starting chunk of data.
+    /// * The second slice is the second contiguous chunk of data. This may
+    /// or may not be empty depending if the buffer needed to wrap around to the beginning of
+    /// its internal memory layout.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use bit_mask_ring_buf::BMRingBuf;
+    ///
+    /// let mut rb = BMRingBuf::<u32>::from_len(4);
+    /// rb[0] = 1;
+    /// rb[1] = 2;
+    /// rb[2] = 3;
+    /// rb[3] = 4;
+    ///
+    /// let (s1, s2) = rb.as_mut_slices_latest(-4, 3);
+    /// assert_eq!(s1, &mut [1, 2, 3]);
+    /// assert_eq!(s2, &mut []);
+    ///
+    /// let (s1, s2) = rb.as_mut_slices_latest(0, 5);
+    /// assert_eq!(s1, &mut [2, 3, 4]);
+    /// assert_eq!(s2, &mut [1]);
+    /// ```
+    pub fn as_mut_slices_latest(&mut self, start: isize, len: usize) -> (&mut [T], &mut [T]) {
+        let mut start = self.constrain(start) as usize;
+
+        // Safe because of the algorithm of bit-masking the index on an array/vec
+        // whose length is a power of 2.
+        //
+        // Both the length of self.vec and the value of self.mask are only modified
+        // in self.set_len(). This function makes sure these values are valid.
+        // The constructors also correctly call this function.
+        //
+        // Memory is created and initialized by a Vec, so it is always valid.
+        unsafe {
+            let self_vec_ptr = self.vec.as_mut_ptr();
+
+            let mut first_portion_len = self.vec.len() - start;
+            if len > first_portion_len {
+                let second_portion_len = if len > self.vec.len() {
+                    let end_index = (start + len) as isize;
+                    start = self.constrain(end_index - self.vec.len() as isize) as usize;
+                    first_portion_len = self.vec.len() - start;
+                    start
+                } else {
+                    std::cmp::min(len - first_portion_len, start)
+                };
+
                 (
                     &mut *std::ptr::slice_from_raw_parts_mut(
                         self_vec_ptr.add(start),
@@ -1642,6 +1793,152 @@ mod tests {
     }
 
     #[test]
+    fn bit_mask_ring_buf_as_slices_latest() {
+        let mut ring_buf = BMRingBuf::<f32>::from_len(4);
+        ring_buf.write_latest(&[0.0, 1.0, 2.0, 3.0], 0);
+
+        let (s1, s2) = ring_buf.as_slices_latest(0, 0);
+        assert_eq!(s1, &[]);
+        assert_eq!(s2, &[]);
+        let (s1, s2) = ring_buf.as_slices_latest(0, 1);
+        assert_eq!(s1, &[0.0]);
+        assert_eq!(s2, &[]);
+        let (s1, s2) = ring_buf.as_slices_latest(0, 2);
+        assert_eq!(s1, &[0.0, 1.0]);
+        assert_eq!(s2, &[]);
+        let (s1, s2) = ring_buf.as_slices_latest(0, 3);
+        assert_eq!(s1, &[0.0, 1.0, 2.0]);
+        assert_eq!(s2, &[]);
+        let (s1, s2) = ring_buf.as_slices_latest(0, 4);
+        assert_eq!(s1, &[0.0, 1.0, 2.0, 3.0]);
+        assert_eq!(s2, &[]);
+        let (s1, s2) = ring_buf.as_slices_latest(0, 5);
+        assert_eq!(s1, &[1.0, 2.0, 3.0]);
+        assert_eq!(s2, &[0.0]);
+        let (s1, s2) = ring_buf.as_slices_latest(0, 6);
+        assert_eq!(s1, &[2.0, 3.0]);
+        assert_eq!(s2, &[0.0, 1.0]);
+        let (s1, s2) = ring_buf.as_slices_latest(0, 7);
+        assert_eq!(s1, &[3.0]);
+        assert_eq!(s2, &[0.0, 1.0, 2.0]);
+        let (s1, s2) = ring_buf.as_slices_latest(0, 10);
+        assert_eq!(s1, &[2.0, 3.0]);
+        assert_eq!(s2, &[0.0, 1.0]);
+
+        let (s1, s2) = ring_buf.as_slices_latest(1, 0);
+        assert_eq!(s1, &[]);
+        assert_eq!(s2, &[]);
+        let (s1, s2) = ring_buf.as_slices_latest(1, 1);
+        assert_eq!(s1, &[1.0]);
+        assert_eq!(s2, &[]);
+        let (s1, s2) = ring_buf.as_slices_latest(1, 2);
+        assert_eq!(s1, &[1.0, 2.0]);
+        assert_eq!(s2, &[]);
+        let (s1, s2) = ring_buf.as_slices_latest(1, 3);
+        assert_eq!(s1, &[1.0, 2.0, 3.0]);
+        assert_eq!(s2, &[]);
+        let (s1, s2) = ring_buf.as_slices_latest(1, 4);
+        assert_eq!(s1, &[1.0, 2.0, 3.0]);
+        assert_eq!(s2, &[0.0]);
+        let (s1, s2) = ring_buf.as_slices_latest(1, 5);
+        assert_eq!(s1, &[2.0, 3.0]);
+        assert_eq!(s2, &[0.0, 1.0]);
+        let (s1, s2) = ring_buf.as_slices_latest(1, 6);
+        assert_eq!(s1, &[3.0]);
+        assert_eq!(s2, &[0.0, 1.0, 2.0]);
+        let (s1, s2) = ring_buf.as_slices_latest(1, 7);
+        assert_eq!(s1, &[0.0, 1.0, 2.0, 3.0]);
+        assert_eq!(s2, &[]);
+        let (s1, s2) = ring_buf.as_slices_latest(1, 10);
+        assert_eq!(s1, &[3.0]);
+        assert_eq!(s2, &[0.0, 1.0, 2.0]);
+
+        let (s1, s2) = ring_buf.as_slices_latest(2, 0);
+        assert_eq!(s1, &[]);
+        assert_eq!(s2, &[]);
+        let (s1, s2) = ring_buf.as_slices_latest(2, 1);
+        assert_eq!(s1, &[2.0]);
+        assert_eq!(s2, &[]);
+        let (s1, s2) = ring_buf.as_slices_latest(2, 2);
+        assert_eq!(s1, &[2.0, 3.0]);
+        assert_eq!(s2, &[]);
+        let (s1, s2) = ring_buf.as_slices_latest(2, 3);
+        assert_eq!(s1, &[2.0, 3.0]);
+        assert_eq!(s2, &[0.0]);
+        let (s1, s2) = ring_buf.as_slices_latest(2, 4);
+        assert_eq!(s1, &[2.0, 3.0]);
+        assert_eq!(s2, &[0.0, 1.0]);
+        let (s1, s2) = ring_buf.as_slices_latest(2, 5);
+        assert_eq!(s1, &[3.0]);
+        assert_eq!(s2, &[0.0, 1.0, 2.0]);
+        let (s1, s2) = ring_buf.as_slices_latest(2, 6);
+        assert_eq!(s1, &[0.0, 1.0, 2.0, 3.0]);
+        assert_eq!(s2, &[]);
+        let (s1, s2) = ring_buf.as_slices_latest(2, 7);
+        assert_eq!(s1, &[1.0, 2.0, 3.0]);
+        assert_eq!(s2, &[0.0]);
+        let (s1, s2) = ring_buf.as_slices_latest(2, 10);
+        assert_eq!(s1, &[0.0, 1.0, 2.0, 3.0]);
+        assert_eq!(s2, &[]);
+
+        let (s1, s2) = ring_buf.as_slices_latest(3, 0);
+        assert_eq!(s1, &[]);
+        assert_eq!(s2, &[]);
+        let (s1, s2) = ring_buf.as_slices_latest(3, 1);
+        assert_eq!(s1, &[3.0]);
+        assert_eq!(s2, &[]);
+        let (s1, s2) = ring_buf.as_slices_latest(3, 2);
+        assert_eq!(s1, &[3.0]);
+        assert_eq!(s2, &[0.0]);
+        let (s1, s2) = ring_buf.as_slices_latest(3, 3);
+        assert_eq!(s1, &[3.0]);
+        assert_eq!(s2, &[0.0, 1.0]);
+        let (s1, s2) = ring_buf.as_slices_latest(3, 4);
+        assert_eq!(s1, &[3.0]);
+        assert_eq!(s2, &[0.0, 1.0, 2.0]);
+        let (s1, s2) = ring_buf.as_slices_latest(3, 5);
+        assert_eq!(s1, &[0.0, 1.0, 2.0, 3.0]);
+        assert_eq!(s2, &[]);
+        let (s1, s2) = ring_buf.as_slices_latest(3, 6);
+        assert_eq!(s1, &[1.0, 2.0, 3.0]);
+        assert_eq!(s2, &[0.0]);
+        let (s1, s2) = ring_buf.as_slices_latest(3, 7);
+        assert_eq!(s1, &[2.0, 3.0]);
+        assert_eq!(s2, &[0.0, 1.0]);
+        let (s1, s2) = ring_buf.as_slices_latest(3, 10);
+        assert_eq!(s1, &[1.0, 2.0, 3.0]);
+        assert_eq!(s2, &[0.0]);
+
+        let (s1, s2) = ring_buf.as_slices_latest(4, 0);
+        assert_eq!(s1, &[]);
+        assert_eq!(s2, &[]);
+        let (s1, s2) = ring_buf.as_slices_latest(4, 1);
+        assert_eq!(s1, &[0.0]);
+        assert_eq!(s2, &[]);
+        let (s1, s2) = ring_buf.as_slices_latest(4, 2);
+        assert_eq!(s1, &[0.0, 1.0]);
+        assert_eq!(s2, &[]);
+        let (s1, s2) = ring_buf.as_slices_latest(4, 3);
+        assert_eq!(s1, &[0.0, 1.0, 2.0]);
+        assert_eq!(s2, &[]);
+        let (s1, s2) = ring_buf.as_slices_latest(4, 4);
+        assert_eq!(s1, &[0.0, 1.0, 2.0, 3.0]);
+        assert_eq!(s2, &[]);
+        let (s1, s2) = ring_buf.as_slices_latest(4, 5);
+        assert_eq!(s1, &[1.0, 2.0, 3.0]);
+        assert_eq!(s2, &[0.0]);
+        let (s1, s2) = ring_buf.as_slices_latest(4, 6);
+        assert_eq!(s1, &[2.0, 3.0]);
+        assert_eq!(s2, &[0.0, 1.0]);
+        let (s1, s2) = ring_buf.as_slices_latest(4, 7);
+        assert_eq!(s1, &[3.0]);
+        assert_eq!(s2, &[0.0, 1.0, 2.0]);
+        let (s1, s2) = ring_buf.as_slices_latest(4, 10);
+        assert_eq!(s1, &[2.0, 3.0]);
+        assert_eq!(s2, &[0.0, 1.0]);
+    }
+
+    #[test]
     fn bit_mask_ring_buf_as_mut_slices_len() {
         let mut ring_buf = BMRingBuf::<f32>::from_len(4);
         ring_buf.write_latest(&[0.0, 1.0, 2.0, 3.0], 0);
@@ -1740,6 +2037,152 @@ mod tests {
         let (s1, s2) = ring_buf.as_mut_slices_len(4, 5);
         assert_eq!(s1, &[0.0, 1.0, 2.0, 3.0]);
         assert_eq!(s2, &[]);
+    }
+
+    #[test]
+    fn bit_mask_ring_buf_as_mut_slices_latest() {
+        let mut ring_buf = BMRingBuf::<f32>::from_len(4);
+        ring_buf.write_latest(&[0.0, 1.0, 2.0, 3.0], 0);
+
+        let (s1, s2) = ring_buf.as_mut_slices_latest(0, 0);
+        assert_eq!(s1, &mut []);
+        assert_eq!(s2, &mut []);
+        let (s1, s2) = ring_buf.as_mut_slices_latest(0, 1);
+        assert_eq!(s1, &mut [0.0]);
+        assert_eq!(s2, &mut []);
+        let (s1, s2) = ring_buf.as_mut_slices_latest(0, 2);
+        assert_eq!(s1, &mut [0.0, 1.0]);
+        assert_eq!(s2, &mut []);
+        let (s1, s2) = ring_buf.as_mut_slices_latest(0, 3);
+        assert_eq!(s1, &mut [0.0, 1.0, 2.0]);
+        assert_eq!(s2, &mut []);
+        let (s1, s2) = ring_buf.as_mut_slices_latest(0, 4);
+        assert_eq!(s1, &mut [0.0, 1.0, 2.0, 3.0]);
+        assert_eq!(s2, &mut []);
+        let (s1, s2) = ring_buf.as_mut_slices_latest(0, 5);
+        assert_eq!(s1, &mut [1.0, 2.0, 3.0]);
+        assert_eq!(s2, &mut [0.0]);
+        let (s1, s2) = ring_buf.as_mut_slices_latest(0, 6);
+        assert_eq!(s1, &mut [2.0, 3.0]);
+        assert_eq!(s2, &mut [0.0, 1.0]);
+        let (s1, s2) = ring_buf.as_mut_slices_latest(0, 7);
+        assert_eq!(s1, &mut [3.0]);
+        assert_eq!(s2, &mut [0.0, 1.0, 2.0]);
+        let (s1, s2) = ring_buf.as_mut_slices_latest(0, 10);
+        assert_eq!(s1, &mut [2.0, 3.0]);
+        assert_eq!(s2, &mut [0.0, 1.0]);
+
+        let (s1, s2) = ring_buf.as_mut_slices_latest(1, 0);
+        assert_eq!(s1, &mut []);
+        assert_eq!(s2, &mut []);
+        let (s1, s2) = ring_buf.as_mut_slices_latest(1, 1);
+        assert_eq!(s1, &mut [1.0]);
+        assert_eq!(s2, &mut []);
+        let (s1, s2) = ring_buf.as_mut_slices_latest(1, 2);
+        assert_eq!(s1, &mut [1.0, 2.0]);
+        assert_eq!(s2, &mut []);
+        let (s1, s2) = ring_buf.as_mut_slices_latest(1, 3);
+        assert_eq!(s1, &mut [1.0, 2.0, 3.0]);
+        assert_eq!(s2, &mut []);
+        let (s1, s2) = ring_buf.as_mut_slices_latest(1, 4);
+        assert_eq!(s1, &mut [1.0, 2.0, 3.0]);
+        assert_eq!(s2, &mut [0.0]);
+        let (s1, s2) = ring_buf.as_mut_slices_latest(1, 5);
+        assert_eq!(s1, &mut [2.0, 3.0]);
+        assert_eq!(s2, &mut [0.0, 1.0]);
+        let (s1, s2) = ring_buf.as_mut_slices_latest(1, 6);
+        assert_eq!(s1, &mut [3.0]);
+        assert_eq!(s2, &mut [0.0, 1.0, 2.0]);
+        let (s1, s2) = ring_buf.as_mut_slices_latest(1, 7);
+        assert_eq!(s1, &mut [0.0, 1.0, 2.0, 3.0]);
+        assert_eq!(s2, &mut []);
+        let (s1, s2) = ring_buf.as_mut_slices_latest(1, 10);
+        assert_eq!(s1, &mut [3.0]);
+        assert_eq!(s2, &mut [0.0, 1.0, 2.0]);
+
+        let (s1, s2) = ring_buf.as_mut_slices_latest(2, 0);
+        assert_eq!(s1, &mut []);
+        assert_eq!(s2, &mut []);
+        let (s1, s2) = ring_buf.as_mut_slices_latest(2, 1);
+        assert_eq!(s1, &mut [2.0]);
+        assert_eq!(s2, &mut []);
+        let (s1, s2) = ring_buf.as_mut_slices_latest(2, 2);
+        assert_eq!(s1, &mut [2.0, 3.0]);
+        assert_eq!(s2, &mut []);
+        let (s1, s2) = ring_buf.as_mut_slices_latest(2, 3);
+        assert_eq!(s1, &mut [2.0, 3.0]);
+        assert_eq!(s2, &mut [0.0]);
+        let (s1, s2) = ring_buf.as_mut_slices_latest(2, 4);
+        assert_eq!(s1, &mut [2.0, 3.0]);
+        assert_eq!(s2, &mut [0.0, 1.0]);
+        let (s1, s2) = ring_buf.as_mut_slices_latest(2, 5);
+        assert_eq!(s1, &mut [3.0]);
+        assert_eq!(s2, &mut [0.0, 1.0, 2.0]);
+        let (s1, s2) = ring_buf.as_mut_slices_latest(2, 6);
+        assert_eq!(s1, &mut [0.0, 1.0, 2.0, 3.0]);
+        assert_eq!(s2, &mut []);
+        let (s1, s2) = ring_buf.as_mut_slices_latest(2, 7);
+        assert_eq!(s1, &mut [1.0, 2.0, 3.0]);
+        assert_eq!(s2, &mut [0.0]);
+        let (s1, s2) = ring_buf.as_mut_slices_latest(2, 10);
+        assert_eq!(s1, &mut [0.0, 1.0, 2.0, 3.0]);
+        assert_eq!(s2, &mut []);
+
+        let (s1, s2) = ring_buf.as_mut_slices_latest(3, 0);
+        assert_eq!(s1, &mut []);
+        assert_eq!(s2, &mut []);
+        let (s1, s2) = ring_buf.as_mut_slices_latest(3, 1);
+        assert_eq!(s1, &mut [3.0]);
+        assert_eq!(s2, &mut []);
+        let (s1, s2) = ring_buf.as_mut_slices_latest(3, 2);
+        assert_eq!(s1, &mut [3.0]);
+        assert_eq!(s2, &mut [0.0]);
+        let (s1, s2) = ring_buf.as_mut_slices_latest(3, 3);
+        assert_eq!(s1, &mut [3.0]);
+        assert_eq!(s2, &mut [0.0, 1.0]);
+        let (s1, s2) = ring_buf.as_mut_slices_latest(3, 4);
+        assert_eq!(s1, &mut [3.0]);
+        assert_eq!(s2, &mut [0.0, 1.0, 2.0]);
+        let (s1, s2) = ring_buf.as_mut_slices_latest(3, 5);
+        assert_eq!(s1, &mut [0.0, 1.0, 2.0, 3.0]);
+        assert_eq!(s2, &mut []);
+        let (s1, s2) = ring_buf.as_mut_slices_latest(3, 6);
+        assert_eq!(s1, &mut [1.0, 2.0, 3.0]);
+        assert_eq!(s2, &mut [0.0]);
+        let (s1, s2) = ring_buf.as_mut_slices_latest(3, 7);
+        assert_eq!(s1, &mut [2.0, 3.0]);
+        assert_eq!(s2, &mut [0.0, 1.0]);
+        let (s1, s2) = ring_buf.as_mut_slices_latest(3, 10);
+        assert_eq!(s1, &mut [1.0, 2.0, 3.0]);
+        assert_eq!(s2, &mut [0.0]);
+
+        let (s1, s2) = ring_buf.as_mut_slices_latest(4, 0);
+        assert_eq!(s1, &mut []);
+        assert_eq!(s2, &mut []);
+        let (s1, s2) = ring_buf.as_mut_slices_latest(4, 1);
+        assert_eq!(s1, &mut [0.0]);
+        assert_eq!(s2, &mut []);
+        let (s1, s2) = ring_buf.as_mut_slices_latest(4, 2);
+        assert_eq!(s1, &mut [0.0, 1.0]);
+        assert_eq!(s2, &mut []);
+        let (s1, s2) = ring_buf.as_mut_slices_latest(4, 3);
+        assert_eq!(s1, &mut [0.0, 1.0, 2.0]);
+        assert_eq!(s2, &mut []);
+        let (s1, s2) = ring_buf.as_mut_slices_latest(4, 4);
+        assert_eq!(s1, &mut [0.0, 1.0, 2.0, 3.0]);
+        assert_eq!(s2, &mut []);
+        let (s1, s2) = ring_buf.as_mut_slices_latest(4, 5);
+        assert_eq!(s1, &mut [1.0, 2.0, 3.0]);
+        assert_eq!(s2, &mut [0.0]);
+        let (s1, s2) = ring_buf.as_mut_slices_latest(4, 6);
+        assert_eq!(s1, &mut [2.0, 3.0]);
+        assert_eq!(s2, &mut [0.0, 1.0]);
+        let (s1, s2) = ring_buf.as_mut_slices_latest(4, 7);
+        assert_eq!(s1, &mut [3.0]);
+        assert_eq!(s2, &mut [0.0, 1.0, 2.0]);
+        let (s1, s2) = ring_buf.as_mut_slices_latest(4, 10);
+        assert_eq!(s1, &mut [2.0, 3.0]);
+        assert_eq!(s2, &mut [0.0, 1.0]);
     }
 
     #[test]

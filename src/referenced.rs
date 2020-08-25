@@ -120,10 +120,10 @@ impl<'a, T: Copy + Clone + Default> BMRingBufRef<'a, T> {
         // Both the length of self.data and the value of self.mask are only modified
         // in the constructor, which makes sure these values are valid.
         unsafe {
-            let self_vec_ptr = self.data.as_ptr();
+            let self_data_ptr = self.data.as_ptr();
             (
-                &*std::ptr::slice_from_raw_parts(self_vec_ptr.add(start), self.data.len() - start),
-                &*std::ptr::slice_from_raw_parts(self_vec_ptr, start),
+                &*std::ptr::slice_from_raw_parts(self_data_ptr.add(start), self.data.len() - start),
+                &*std::ptr::slice_from_raw_parts(self_data_ptr, start),
             )
         }
     }
@@ -172,18 +172,91 @@ impl<'a, T: Copy + Clone + Default> BMRingBufRef<'a, T> {
         // Both the length of self.data and the value of self.mask are only modified
         // in the constructor, which makes sure these values are valid.
         unsafe {
-            let self_vec_ptr = self.data.as_ptr();
+            let self_data_ptr = self.data.as_ptr();
 
             let first_portion_len = self.data.len() - start;
             if len > first_portion_len {
                 let second_portion_len = std::cmp::min(len - first_portion_len, start);
                 (
-                    &*std::ptr::slice_from_raw_parts(self_vec_ptr.add(start), first_portion_len),
-                    &*std::ptr::slice_from_raw_parts(self_vec_ptr, second_portion_len),
+                    &*std::ptr::slice_from_raw_parts(self_data_ptr.add(start), first_portion_len),
+                    &*std::ptr::slice_from_raw_parts(self_data_ptr, second_portion_len),
                 )
             } else {
                 (
-                    &*std::ptr::slice_from_raw_parts(self_vec_ptr.add(start), len),
+                    &*std::ptr::slice_from_raw_parts(self_data_ptr.add(start), len),
+                    &[],
+                )
+            }
+        }
+    }
+
+    /// Returns two slices of data in the ring buffer
+    /// starting at the index `start` and with length `len`. If `len` is greater
+    /// than the length of the ring buffer, then the buffer's length will be used
+    /// instead, while still preserving the position of the last element.
+    ///
+    /// * `start` - The starting index
+    /// * `len` - The length of data to read. If `len` is greater than the
+    /// length of the ring buffer, then the buffer's length will be used instead, while
+    /// still preserving the position of the last element.
+    ///
+    /// # Safety
+    ///
+    /// * Using this may cause undefined behavior if the given data in `slice`
+    /// in `BMRingBufRef::new()` was not initialized first.
+    ///
+    /// # Returns
+    ///
+    /// * The first slice is the starting chunk of data.
+    /// * The second slice is the second contiguous chunk of data. This may
+    /// or may not be empty depending if the buffer needed to wrap around to the beginning of
+    /// its internal memory layout.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use bit_mask_ring_buf::BMRingBufRef;
+    ///
+    /// let mut data = [1u32, 2, 3, 4];
+    /// let mut rb = BMRingBufRef::new(&mut data[..]);
+    ///
+    /// let (s1, s2) = rb.as_slices_latest(-4, 3);
+    /// assert_eq!(s1, &[1, 2, 3]);
+    /// assert_eq!(s2, &[]);
+    ///
+    /// let (s1, s2) = rb.as_slices_latest(0, 5);
+    /// assert_eq!(s1, &[2, 3, 4]);
+    /// assert_eq!(s2, &[1]);
+    /// ```
+    pub fn as_slices_latest(&self, start: isize, len: usize) -> (&[T], &[T]) {
+        let mut start = self.constrain(start) as usize;
+
+        // Safe because of the algorithm of bit-masking the index on an array/vec
+        // whose length is a power of 2.
+        //
+        // Both the length of self.data and the value of self.mask are only modified
+        // in the constructor, which makes sure these values are valid.
+        unsafe {
+            let self_data_ptr = self.data.as_ptr();
+
+            let mut first_portion_len = self.data.len() - start;
+            if len > first_portion_len {
+                let second_portion_len = if len > self.data.len() {
+                    let end_index = (start + len) as isize;
+                    start = self.constrain(end_index - self.data.len() as isize) as usize;
+                    first_portion_len = self.data.len() - start;
+                    start
+                } else {
+                    std::cmp::min(len - first_portion_len, start)
+                };
+
+                (
+                    &*std::ptr::slice_from_raw_parts(self_data_ptr.add(start), first_portion_len),
+                    &*std::ptr::slice_from_raw_parts(self_data_ptr, second_portion_len),
+                )
+            } else {
+                (
+                    &*std::ptr::slice_from_raw_parts(self_data_ptr.add(start), len),
                     &[],
                 )
             }
@@ -230,13 +303,13 @@ impl<'a, T: Copy + Clone + Default> BMRingBufRef<'a, T> {
         // Both the length of self.data and the value of self.mask are only modified
         // in the constructor, which makes sure these values are valid.
         unsafe {
-            let self_vec_ptr = self.data.as_mut_ptr();
+            let self_data_ptr = self.data.as_mut_ptr();
             (
                 &mut *std::ptr::slice_from_raw_parts_mut(
-                    self_vec_ptr.add(start),
+                    self_data_ptr.add(start),
                     self.data.len() - start,
                 ),
-                &mut *std::ptr::slice_from_raw_parts_mut(self_vec_ptr, start),
+                &mut *std::ptr::slice_from_raw_parts_mut(self_data_ptr, start),
             )
         }
     }
@@ -285,21 +358,97 @@ impl<'a, T: Copy + Clone + Default> BMRingBufRef<'a, T> {
         // Both the length of self.data and the value of self.mask are only modified
         // in the constructor, which makes sure these values are valid.
         unsafe {
-            let self_vec_ptr = self.data.as_mut_ptr();
+            let self_data_ptr = self.data.as_mut_ptr();
 
             let first_portion_len = self.data.len() - start;
             if len > first_portion_len {
                 let second_portion_len = std::cmp::min(len - first_portion_len, start);
                 (
                     &mut *std::ptr::slice_from_raw_parts_mut(
-                        self_vec_ptr.add(start),
+                        self_data_ptr.add(start),
                         first_portion_len,
                     ),
-                    &mut *std::ptr::slice_from_raw_parts_mut(self_vec_ptr, second_portion_len),
+                    &mut *std::ptr::slice_from_raw_parts_mut(self_data_ptr, second_portion_len),
                 )
             } else {
                 (
-                    &mut *std::ptr::slice_from_raw_parts_mut(self_vec_ptr.add(start), len),
+                    &mut *std::ptr::slice_from_raw_parts_mut(self_data_ptr.add(start), len),
+                    &mut [],
+                )
+            }
+        }
+    }
+
+    /// Returns two mutable slices of data in the ring buffer
+    /// starting at the index `start` and with length `len`. If `len` is greater
+    /// than the length of the ring buffer, then the buffer's length will be used
+    /// instead, while still preserving the position of the last element.
+    ///
+    /// * `start` - The starting index
+    /// * `len` - The length of data to read. If `len` is greater than the
+    /// length of the ring buffer, then the buffer's length will be used instead, while
+    /// still preserving the position of the last element.
+    ///
+    /// # Safety
+    ///
+    /// * Using this may cause undefined behavior if the given data in `slice`
+    /// in `BMRingBufRef::new()` was not initialized first.
+    ///
+    /// # Returns
+    ///
+    /// * The first slice is the starting chunk of data.
+    /// * The second slice is the second contiguous chunk of data. This may
+    /// or may not be empty depending if the buffer needed to wrap around to the beginning of
+    /// its internal memory layout.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use bit_mask_ring_buf::BMRingBufRef;
+    ///
+    /// let mut data = [1u32, 2, 3, 4];
+    /// let mut rb = BMRingBufRef::new(&mut data[..]);
+    ///
+    /// let (s1, s2) = rb.as_mut_slices_latest(-4, 3);
+    /// assert_eq!(s1, &mut [1, 2, 3]);
+    /// assert_eq!(s2, &mut []);
+    ///
+    /// let (s1, s2) = rb.as_mut_slices_latest(0, 5);
+    /// assert_eq!(s1, &mut [2, 3, 4]);
+    /// assert_eq!(s2, &mut [1]);
+    /// ```
+    pub fn as_mut_slices_latest(&mut self, start: isize, len: usize) -> (&mut [T], &mut [T]) {
+        let mut start = self.constrain(start) as usize;
+
+        // Safe because of the algorithm of bit-masking the index on an array/vec
+        // whose length is a power of 2.
+        //
+        // Both the length of self.data and the value of self.mask are only modified
+        // in the constructor, which makes sure these values are valid.
+        unsafe {
+            let self_data_ptr = self.data.as_mut_ptr();
+
+            let mut first_portion_len = self.data.len() - start;
+            if len > first_portion_len {
+                let second_portion_len = if len > self.data.len() {
+                    let end_index = (start + len) as isize;
+                    start = self.constrain(end_index - self.data.len() as isize) as usize;
+                    first_portion_len = self.data.len() - start;
+                    start
+                } else {
+                    std::cmp::min(len - first_portion_len, start)
+                };
+
+                (
+                    &mut *std::ptr::slice_from_raw_parts_mut(
+                        self_data_ptr.add(start),
+                        first_portion_len,
+                    ),
+                    &mut *std::ptr::slice_from_raw_parts_mut(self_data_ptr, second_portion_len),
+                )
+            } else {
+                (
+                    &mut *std::ptr::slice_from_raw_parts_mut(self_data_ptr.add(start), len),
                     &mut [],
                 )
             }
@@ -347,7 +496,7 @@ impl<'a, T: Copy + Clone + Default> BMRingBufRef<'a, T> {
         // Memory cannot overlap because a mutable and immutable reference do not
         // alias.
         unsafe {
-            let self_vec_ptr = self.data.as_ptr();
+            let self_data_ptr = self.data.as_ptr();
             let mut slice_ptr = slice.as_mut_ptr();
             let mut slice_len = slice.len();
 
@@ -358,7 +507,7 @@ impl<'a, T: Copy + Clone + Default> BMRingBufRef<'a, T> {
             while slice_len > first_portion_len {
                 // Copy first portion
                 std::ptr::copy_nonoverlapping(
-                    self_vec_ptr.add(start),
+                    self_data_ptr.add(start),
                     slice_ptr,
                     first_portion_len,
                 );
@@ -367,13 +516,13 @@ impl<'a, T: Copy + Clone + Default> BMRingBufRef<'a, T> {
 
                 // Copy second portion
                 let second_portion_len = std::cmp::min(slice_len, start);
-                std::ptr::copy_nonoverlapping(self_vec_ptr, slice_ptr, second_portion_len);
+                std::ptr::copy_nonoverlapping(self_data_ptr, slice_ptr, second_portion_len);
                 slice_ptr = slice_ptr.add(second_portion_len);
                 slice_len -= second_portion_len;
             }
 
             // Copy any elements remaining from start up to the end of self.data
-            std::ptr::copy_nonoverlapping(self_vec_ptr.add(start), slice_ptr, slice_len);
+            std::ptr::copy_nonoverlapping(self_data_ptr.add(start), slice_ptr, slice_len);
         }
     }
 
@@ -432,7 +581,7 @@ impl<'a, T: Copy + Clone + Default> BMRingBufRef<'a, T> {
         // alias.
         unsafe {
             let slice_ptr = slice.as_ptr();
-            let self_vec_ptr = self.data.as_mut_ptr();
+            let self_data_ptr = self.data.as_mut_ptr();
 
             // If the slice is longer than from start_i to the end of self.data, copy that
             // first portion, then wrap to the beginning and copy the remaining second portion.
@@ -440,19 +589,19 @@ impl<'a, T: Copy + Clone + Default> BMRingBufRef<'a, T> {
                 let first_portion_len = self.data.len() - start_i;
                 std::ptr::copy_nonoverlapping(
                     slice_ptr,
-                    self_vec_ptr.add(start_i),
+                    self_data_ptr.add(start_i),
                     first_portion_len,
                 );
 
                 let second_portion_len = slice.len() - first_portion_len;
                 std::ptr::copy_nonoverlapping(
                     slice_ptr.add(first_portion_len),
-                    self_vec_ptr,
+                    self_data_ptr,
                     second_portion_len,
                 );
             } else {
                 // Otherwise, data fits so just copy it
-                std::ptr::copy_nonoverlapping(slice_ptr, self_vec_ptr.add(start_i), slice.len());
+                std::ptr::copy_nonoverlapping(slice_ptr, self_data_ptr.add(start_i), slice.len());
             }
         }
     }
@@ -1112,6 +1261,152 @@ mod tests {
     }
 
     #[test]
+    fn bit_mask_ring_buf_ref_as_slices_latest() {
+        let mut data = [0.0f32, 1.0, 2.0, 3.0];
+        let ring_buf = BMRingBufRef::new(&mut data);
+
+        let (s1, s2) = ring_buf.as_slices_latest(0, 0);
+        assert_eq!(s1, &[]);
+        assert_eq!(s2, &[]);
+        let (s1, s2) = ring_buf.as_slices_latest(0, 1);
+        assert_eq!(s1, &[0.0]);
+        assert_eq!(s2, &[]);
+        let (s1, s2) = ring_buf.as_slices_latest(0, 2);
+        assert_eq!(s1, &[0.0, 1.0]);
+        assert_eq!(s2, &[]);
+        let (s1, s2) = ring_buf.as_slices_latest(0, 3);
+        assert_eq!(s1, &[0.0, 1.0, 2.0]);
+        assert_eq!(s2, &[]);
+        let (s1, s2) = ring_buf.as_slices_latest(0, 4);
+        assert_eq!(s1, &[0.0, 1.0, 2.0, 3.0]);
+        assert_eq!(s2, &[]);
+        let (s1, s2) = ring_buf.as_slices_latest(0, 5);
+        assert_eq!(s1, &[1.0, 2.0, 3.0]);
+        assert_eq!(s2, &[0.0]);
+        let (s1, s2) = ring_buf.as_slices_latest(0, 6);
+        assert_eq!(s1, &[2.0, 3.0]);
+        assert_eq!(s2, &[0.0, 1.0]);
+        let (s1, s2) = ring_buf.as_slices_latest(0, 7);
+        assert_eq!(s1, &[3.0]);
+        assert_eq!(s2, &[0.0, 1.0, 2.0]);
+        let (s1, s2) = ring_buf.as_slices_latest(0, 10);
+        assert_eq!(s1, &[2.0, 3.0]);
+        assert_eq!(s2, &[0.0, 1.0]);
+
+        let (s1, s2) = ring_buf.as_slices_latest(1, 0);
+        assert_eq!(s1, &[]);
+        assert_eq!(s2, &[]);
+        let (s1, s2) = ring_buf.as_slices_latest(1, 1);
+        assert_eq!(s1, &[1.0]);
+        assert_eq!(s2, &[]);
+        let (s1, s2) = ring_buf.as_slices_latest(1, 2);
+        assert_eq!(s1, &[1.0, 2.0]);
+        assert_eq!(s2, &[]);
+        let (s1, s2) = ring_buf.as_slices_latest(1, 3);
+        assert_eq!(s1, &[1.0, 2.0, 3.0]);
+        assert_eq!(s2, &[]);
+        let (s1, s2) = ring_buf.as_slices_latest(1, 4);
+        assert_eq!(s1, &[1.0, 2.0, 3.0]);
+        assert_eq!(s2, &[0.0]);
+        let (s1, s2) = ring_buf.as_slices_latest(1, 5);
+        assert_eq!(s1, &[2.0, 3.0]);
+        assert_eq!(s2, &[0.0, 1.0]);
+        let (s1, s2) = ring_buf.as_slices_latest(1, 6);
+        assert_eq!(s1, &[3.0]);
+        assert_eq!(s2, &[0.0, 1.0, 2.0]);
+        let (s1, s2) = ring_buf.as_slices_latest(1, 7);
+        assert_eq!(s1, &[0.0, 1.0, 2.0, 3.0]);
+        assert_eq!(s2, &[]);
+        let (s1, s2) = ring_buf.as_slices_latest(1, 10);
+        assert_eq!(s1, &[3.0]);
+        assert_eq!(s2, &[0.0, 1.0, 2.0]);
+
+        let (s1, s2) = ring_buf.as_slices_latest(2, 0);
+        assert_eq!(s1, &[]);
+        assert_eq!(s2, &[]);
+        let (s1, s2) = ring_buf.as_slices_latest(2, 1);
+        assert_eq!(s1, &[2.0]);
+        assert_eq!(s2, &[]);
+        let (s1, s2) = ring_buf.as_slices_latest(2, 2);
+        assert_eq!(s1, &[2.0, 3.0]);
+        assert_eq!(s2, &[]);
+        let (s1, s2) = ring_buf.as_slices_latest(2, 3);
+        assert_eq!(s1, &[2.0, 3.0]);
+        assert_eq!(s2, &[0.0]);
+        let (s1, s2) = ring_buf.as_slices_latest(2, 4);
+        assert_eq!(s1, &[2.0, 3.0]);
+        assert_eq!(s2, &[0.0, 1.0]);
+        let (s1, s2) = ring_buf.as_slices_latest(2, 5);
+        assert_eq!(s1, &[3.0]);
+        assert_eq!(s2, &[0.0, 1.0, 2.0]);
+        let (s1, s2) = ring_buf.as_slices_latest(2, 6);
+        assert_eq!(s1, &[0.0, 1.0, 2.0, 3.0]);
+        assert_eq!(s2, &[]);
+        let (s1, s2) = ring_buf.as_slices_latest(2, 7);
+        assert_eq!(s1, &[1.0, 2.0, 3.0]);
+        assert_eq!(s2, &[0.0]);
+        let (s1, s2) = ring_buf.as_slices_latest(2, 10);
+        assert_eq!(s1, &[0.0, 1.0, 2.0, 3.0]);
+        assert_eq!(s2, &[]);
+
+        let (s1, s2) = ring_buf.as_slices_latest(3, 0);
+        assert_eq!(s1, &[]);
+        assert_eq!(s2, &[]);
+        let (s1, s2) = ring_buf.as_slices_latest(3, 1);
+        assert_eq!(s1, &[3.0]);
+        assert_eq!(s2, &[]);
+        let (s1, s2) = ring_buf.as_slices_latest(3, 2);
+        assert_eq!(s1, &[3.0]);
+        assert_eq!(s2, &[0.0]);
+        let (s1, s2) = ring_buf.as_slices_latest(3, 3);
+        assert_eq!(s1, &[3.0]);
+        assert_eq!(s2, &[0.0, 1.0]);
+        let (s1, s2) = ring_buf.as_slices_latest(3, 4);
+        assert_eq!(s1, &[3.0]);
+        assert_eq!(s2, &[0.0, 1.0, 2.0]);
+        let (s1, s2) = ring_buf.as_slices_latest(3, 5);
+        assert_eq!(s1, &[0.0, 1.0, 2.0, 3.0]);
+        assert_eq!(s2, &[]);
+        let (s1, s2) = ring_buf.as_slices_latest(3, 6);
+        assert_eq!(s1, &[1.0, 2.0, 3.0]);
+        assert_eq!(s2, &[0.0]);
+        let (s1, s2) = ring_buf.as_slices_latest(3, 7);
+        assert_eq!(s1, &[2.0, 3.0]);
+        assert_eq!(s2, &[0.0, 1.0]);
+        let (s1, s2) = ring_buf.as_slices_latest(3, 10);
+        assert_eq!(s1, &[1.0, 2.0, 3.0]);
+        assert_eq!(s2, &[0.0]);
+
+        let (s1, s2) = ring_buf.as_slices_latest(4, 0);
+        assert_eq!(s1, &[]);
+        assert_eq!(s2, &[]);
+        let (s1, s2) = ring_buf.as_slices_latest(4, 1);
+        assert_eq!(s1, &[0.0]);
+        assert_eq!(s2, &[]);
+        let (s1, s2) = ring_buf.as_slices_latest(4, 2);
+        assert_eq!(s1, &[0.0, 1.0]);
+        assert_eq!(s2, &[]);
+        let (s1, s2) = ring_buf.as_slices_latest(4, 3);
+        assert_eq!(s1, &[0.0, 1.0, 2.0]);
+        assert_eq!(s2, &[]);
+        let (s1, s2) = ring_buf.as_slices_latest(4, 4);
+        assert_eq!(s1, &[0.0, 1.0, 2.0, 3.0]);
+        assert_eq!(s2, &[]);
+        let (s1, s2) = ring_buf.as_slices_latest(4, 5);
+        assert_eq!(s1, &[1.0, 2.0, 3.0]);
+        assert_eq!(s2, &[0.0]);
+        let (s1, s2) = ring_buf.as_slices_latest(4, 6);
+        assert_eq!(s1, &[2.0, 3.0]);
+        assert_eq!(s2, &[0.0, 1.0]);
+        let (s1, s2) = ring_buf.as_slices_latest(4, 7);
+        assert_eq!(s1, &[3.0]);
+        assert_eq!(s2, &[0.0, 1.0, 2.0]);
+        let (s1, s2) = ring_buf.as_slices_latest(4, 10);
+        assert_eq!(s1, &[2.0, 3.0]);
+        assert_eq!(s2, &[0.0, 1.0]);
+    }
+
+    #[test]
     fn bit_mask_ring_buf_ref_as_mut_slices_len() {
         let mut data = [0.0f32, 1.0, 2.0, 3.0];
         let mut ring_buf = BMRingBufRef::new(&mut data);
@@ -1210,6 +1505,152 @@ mod tests {
         let (s1, s2) = ring_buf.as_mut_slices_len(4, 5);
         assert_eq!(s1, &[0.0, 1.0, 2.0, 3.0]);
         assert_eq!(s2, &[]);
+    }
+
+    #[test]
+    fn bit_mask_ring_buf_ref_as_mut_slices_latest() {
+        let mut data = [0.0f32, 1.0, 2.0, 3.0];
+        let mut ring_buf = BMRingBufRef::new(&mut data);
+
+        let (s1, s2) = ring_buf.as_mut_slices_latest(0, 0);
+        assert_eq!(s1, &mut []);
+        assert_eq!(s2, &mut []);
+        let (s1, s2) = ring_buf.as_mut_slices_latest(0, 1);
+        assert_eq!(s1, &mut [0.0]);
+        assert_eq!(s2, &mut []);
+        let (s1, s2) = ring_buf.as_mut_slices_latest(0, 2);
+        assert_eq!(s1, &mut [0.0, 1.0]);
+        assert_eq!(s2, &mut []);
+        let (s1, s2) = ring_buf.as_mut_slices_latest(0, 3);
+        assert_eq!(s1, &mut [0.0, 1.0, 2.0]);
+        assert_eq!(s2, &mut []);
+        let (s1, s2) = ring_buf.as_mut_slices_latest(0, 4);
+        assert_eq!(s1, &mut [0.0, 1.0, 2.0, 3.0]);
+        assert_eq!(s2, &mut []);
+        let (s1, s2) = ring_buf.as_mut_slices_latest(0, 5);
+        assert_eq!(s1, &mut [1.0, 2.0, 3.0]);
+        assert_eq!(s2, &mut [0.0]);
+        let (s1, s2) = ring_buf.as_mut_slices_latest(0, 6);
+        assert_eq!(s1, &mut [2.0, 3.0]);
+        assert_eq!(s2, &mut [0.0, 1.0]);
+        let (s1, s2) = ring_buf.as_mut_slices_latest(0, 7);
+        assert_eq!(s1, &mut [3.0]);
+        assert_eq!(s2, &mut [0.0, 1.0, 2.0]);
+        let (s1, s2) = ring_buf.as_mut_slices_latest(0, 10);
+        assert_eq!(s1, &mut [2.0, 3.0]);
+        assert_eq!(s2, &mut [0.0, 1.0]);
+
+        let (s1, s2) = ring_buf.as_mut_slices_latest(1, 0);
+        assert_eq!(s1, &mut []);
+        assert_eq!(s2, &mut []);
+        let (s1, s2) = ring_buf.as_mut_slices_latest(1, 1);
+        assert_eq!(s1, &mut [1.0]);
+        assert_eq!(s2, &mut []);
+        let (s1, s2) = ring_buf.as_mut_slices_latest(1, 2);
+        assert_eq!(s1, &mut [1.0, 2.0]);
+        assert_eq!(s2, &mut []);
+        let (s1, s2) = ring_buf.as_mut_slices_latest(1, 3);
+        assert_eq!(s1, &mut [1.0, 2.0, 3.0]);
+        assert_eq!(s2, &mut []);
+        let (s1, s2) = ring_buf.as_mut_slices_latest(1, 4);
+        assert_eq!(s1, &mut [1.0, 2.0, 3.0]);
+        assert_eq!(s2, &mut [0.0]);
+        let (s1, s2) = ring_buf.as_mut_slices_latest(1, 5);
+        assert_eq!(s1, &mut [2.0, 3.0]);
+        assert_eq!(s2, &mut [0.0, 1.0]);
+        let (s1, s2) = ring_buf.as_mut_slices_latest(1, 6);
+        assert_eq!(s1, &mut [3.0]);
+        assert_eq!(s2, &mut [0.0, 1.0, 2.0]);
+        let (s1, s2) = ring_buf.as_mut_slices_latest(1, 7);
+        assert_eq!(s1, &mut [0.0, 1.0, 2.0, 3.0]);
+        assert_eq!(s2, &mut []);
+        let (s1, s2) = ring_buf.as_mut_slices_latest(1, 10);
+        assert_eq!(s1, &mut [3.0]);
+        assert_eq!(s2, &mut [0.0, 1.0, 2.0]);
+
+        let (s1, s2) = ring_buf.as_mut_slices_latest(2, 0);
+        assert_eq!(s1, &mut []);
+        assert_eq!(s2, &mut []);
+        let (s1, s2) = ring_buf.as_mut_slices_latest(2, 1);
+        assert_eq!(s1, &mut [2.0]);
+        assert_eq!(s2, &mut []);
+        let (s1, s2) = ring_buf.as_mut_slices_latest(2, 2);
+        assert_eq!(s1, &mut [2.0, 3.0]);
+        assert_eq!(s2, &mut []);
+        let (s1, s2) = ring_buf.as_mut_slices_latest(2, 3);
+        assert_eq!(s1, &mut [2.0, 3.0]);
+        assert_eq!(s2, &mut [0.0]);
+        let (s1, s2) = ring_buf.as_mut_slices_latest(2, 4);
+        assert_eq!(s1, &mut [2.0, 3.0]);
+        assert_eq!(s2, &mut [0.0, 1.0]);
+        let (s1, s2) = ring_buf.as_mut_slices_latest(2, 5);
+        assert_eq!(s1, &mut [3.0]);
+        assert_eq!(s2, &mut [0.0, 1.0, 2.0]);
+        let (s1, s2) = ring_buf.as_mut_slices_latest(2, 6);
+        assert_eq!(s1, &mut [0.0, 1.0, 2.0, 3.0]);
+        assert_eq!(s2, &mut []);
+        let (s1, s2) = ring_buf.as_mut_slices_latest(2, 7);
+        assert_eq!(s1, &mut [1.0, 2.0, 3.0]);
+        assert_eq!(s2, &mut [0.0]);
+        let (s1, s2) = ring_buf.as_mut_slices_latest(2, 10);
+        assert_eq!(s1, &mut [0.0, 1.0, 2.0, 3.0]);
+        assert_eq!(s2, &mut []);
+
+        let (s1, s2) = ring_buf.as_mut_slices_latest(3, 0);
+        assert_eq!(s1, &mut []);
+        assert_eq!(s2, &mut []);
+        let (s1, s2) = ring_buf.as_mut_slices_latest(3, 1);
+        assert_eq!(s1, &mut [3.0]);
+        assert_eq!(s2, &mut []);
+        let (s1, s2) = ring_buf.as_mut_slices_latest(3, 2);
+        assert_eq!(s1, &mut [3.0]);
+        assert_eq!(s2, &mut [0.0]);
+        let (s1, s2) = ring_buf.as_mut_slices_latest(3, 3);
+        assert_eq!(s1, &mut [3.0]);
+        assert_eq!(s2, &mut [0.0, 1.0]);
+        let (s1, s2) = ring_buf.as_mut_slices_latest(3, 4);
+        assert_eq!(s1, &mut [3.0]);
+        assert_eq!(s2, &mut [0.0, 1.0, 2.0]);
+        let (s1, s2) = ring_buf.as_mut_slices_latest(3, 5);
+        assert_eq!(s1, &mut [0.0, 1.0, 2.0, 3.0]);
+        assert_eq!(s2, &mut []);
+        let (s1, s2) = ring_buf.as_mut_slices_latest(3, 6);
+        assert_eq!(s1, &mut [1.0, 2.0, 3.0]);
+        assert_eq!(s2, &mut [0.0]);
+        let (s1, s2) = ring_buf.as_mut_slices_latest(3, 7);
+        assert_eq!(s1, &mut [2.0, 3.0]);
+        assert_eq!(s2, &mut [0.0, 1.0]);
+        let (s1, s2) = ring_buf.as_mut_slices_latest(3, 10);
+        assert_eq!(s1, &mut [1.0, 2.0, 3.0]);
+        assert_eq!(s2, &mut [0.0]);
+
+        let (s1, s2) = ring_buf.as_mut_slices_latest(4, 0);
+        assert_eq!(s1, &mut []);
+        assert_eq!(s2, &mut []);
+        let (s1, s2) = ring_buf.as_mut_slices_latest(4, 1);
+        assert_eq!(s1, &mut [0.0]);
+        assert_eq!(s2, &mut []);
+        let (s1, s2) = ring_buf.as_mut_slices_latest(4, 2);
+        assert_eq!(s1, &mut [0.0, 1.0]);
+        assert_eq!(s2, &mut []);
+        let (s1, s2) = ring_buf.as_mut_slices_latest(4, 3);
+        assert_eq!(s1, &mut [0.0, 1.0, 2.0]);
+        assert_eq!(s2, &mut []);
+        let (s1, s2) = ring_buf.as_mut_slices_latest(4, 4);
+        assert_eq!(s1, &mut [0.0, 1.0, 2.0, 3.0]);
+        assert_eq!(s2, &mut []);
+        let (s1, s2) = ring_buf.as_mut_slices_latest(4, 5);
+        assert_eq!(s1, &mut [1.0, 2.0, 3.0]);
+        assert_eq!(s2, &mut [0.0]);
+        let (s1, s2) = ring_buf.as_mut_slices_latest(4, 6);
+        assert_eq!(s1, &mut [2.0, 3.0]);
+        assert_eq!(s2, &mut [0.0, 1.0]);
+        let (s1, s2) = ring_buf.as_mut_slices_latest(4, 7);
+        assert_eq!(s1, &mut [3.0]);
+        assert_eq!(s2, &mut [0.0, 1.0, 2.0]);
+        let (s1, s2) = ring_buf.as_mut_slices_latest(4, 10);
+        assert_eq!(s1, &mut [2.0, 3.0]);
+        assert_eq!(s2, &mut [0.0, 1.0]);
     }
 
     #[test]
