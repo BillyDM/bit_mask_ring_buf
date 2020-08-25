@@ -32,7 +32,7 @@ impl<'a, T: Copy + Clone + Default> BMRingBufRef<'a, T> {
     /// let mut data = [1u32, 2, 3, 4];
     /// let rb = BMRingBufRef::new(&mut data[..]);
     ///
-    /// assert_eq!(rb.capacity(), 4);
+    /// assert_eq!(rb.len(), 4);
     ///
     /// assert_eq!(rb[0], 1);
     /// assert_eq!(rb[1], 2);
@@ -133,7 +133,7 @@ impl<'a, T: Copy + Clone + Default> BMRingBufRef<'a, T> {
     ///
     /// * `start` - The starting index
     /// * `len` - The length of data to read. If `len` is greater than the
-    /// capacity of the ring buffer, then that capacity will be used instead.
+    /// length of the ring buffer, then the buffer's length will be used instead.
     ///
     /// # Safety
     ///
@@ -246,7 +246,7 @@ impl<'a, T: Copy + Clone + Default> BMRingBufRef<'a, T> {
     ///
     /// * `start` - The starting index
     /// * `len` - The length of data to read. If `len` is greater than the
-    /// capacity of the ring buffer, then that capacity will be used instead.
+    /// length of the ring buffer, then the buffer's length will be used instead.
     ///
     /// # Safety
     ///
@@ -308,7 +308,7 @@ impl<'a, T: Copy + Clone + Default> BMRingBufRef<'a, T> {
 
     /// Copies the data from the ring buffer starting from the index `start`
     /// into the given slice. If the length of `slice` is larger than the
-    /// capacity of the ring buffer, then the data will be reapeated until
+    /// length of the ring buffer, then the data will be reapeated until
     /// the given slice is filled.
     ///
     /// # Safety
@@ -474,7 +474,7 @@ impl<'a, T: Copy + Clone + Default> BMRingBufRef<'a, T> {
     /// ```
     /// use bit_mask_ring_buf::{BMRingBuf, BMRingBufRef};
     ///
-    /// let mut input_rb = BMRingBuf::<u32>::from_capacity(4);
+    /// let mut input_rb = BMRingBuf::<u32>::from_len(4);
     /// input_rb[0] = 1;
     /// input_rb[1] = 2;
     /// input_rb[2] = 3;
@@ -516,7 +516,7 @@ impl<'a, T: Copy + Clone + Default> BMRingBufRef<'a, T> {
         self.write_latest(second, start + first.len() as isize);
     }
 
-    /// Returns the capacity of the ring buffer.
+    /// Returns the length of the ring buffer.
     ///
     /// # Example
     ///
@@ -525,9 +525,9 @@ impl<'a, T: Copy + Clone + Default> BMRingBufRef<'a, T> {
     /// let mut data = [0u32; 4];
     /// let mut rb = BMRingBufRef::new(&mut data[..]);
     ///
-    /// assert_eq!(rb.capacity(), 4);
+    /// assert_eq!(rb.len(), 4);
     /// ```
-    pub fn capacity(&self) -> usize {
+    pub fn len(&self) -> usize {
         self.data.len()
     }
 

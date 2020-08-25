@@ -23,11 +23,11 @@
 //!
 //! // Create a ring buffer with type u32. The data will be
 //! // initialized with the default value (0 in this case).
-//! // The actual capacity will be set to the next highest
-//! // power of 2 if the given capacity is not already
+//! // The actual length will be set to the next highest
+//! // power of 2 if the given length is not already
 //! // a power of 2.
-//! let mut rb = BMRingBuf::<u32>::from_capacity(3);
-//! assert_eq!(rb.capacity(), 4);
+//! let mut rb = BMRingBuf::<u32>::from_len(3);
+//! assert_eq!(rb.len(), 4);
 //!
 //! // Read/write to buffer by indexing with an `isize`.
 //! rb[0] = 0;
@@ -71,7 +71,7 @@
 //! assert_eq!(rb_ref[3], 3);
 //!
 //! // Get linear interpolation on floating point buffers.
-//! let mut rb = BMRingBuf::<f64>::from_capacity(4);
+//! let mut rb = BMRingBuf::<f64>::from_len(4);
 //! rb[0] = 0.0;
 //! rb[1] = 2.0;
 //! rb[2] = 4.0;
@@ -125,21 +125,21 @@ pub struct BMRingBuf<T: Copy + Clone + Default> {
 }
 
 impl<T: Copy + Clone + Default> BMRingBuf<T> {
-    /// Creates a new [`BMRingBuf`] with a capacity that is at least the given
-    /// capacity. The buffer will be initialized with the default value.
+    /// Creates a new [`BMRingBuf`] with a length that is at least the given
+    /// length. The buffer will be initialized with the default value.
     ///
-    /// * `capacity` - The capacity of the ring buffer. The actual capacity will be set
-    /// to the next highest power of 2 if `capacity` is not already a power of 2.
-    /// Capacity will be set to 2 if `capacity < 2`.
+    /// * `len` - The length of the ring buffer. The actual length will be set
+    /// to the next highest power of 2 if `len` is not already a power of 2.
+    /// length will be set to 2 if `len < 2`.
     ///
     /// # Example
     ///
     /// ```
     /// use bit_mask_ring_buf::BMRingBuf;
     ///
-    /// let rb = BMRingBuf::<u32>::from_capacity(3);
+    /// let rb = BMRingBuf::<u32>::from_len(3);
     ///
-    /// assert_eq!(rb.capacity(), 4);
+    /// assert_eq!(rb.len(), 4);
     ///
     /// assert_eq!(rb[0], 0);
     /// assert_eq!(rb[1], 0);
@@ -150,26 +150,26 @@ impl<T: Copy + Clone + Default> BMRingBuf<T> {
     /// # Panics
     ///
     /// * This will panic if this tries to allocate more than `isize::MAX` bytes
-    /// * This will panic if `capacity > (std::usize::MAX/2)+1`
+    /// * This will panic if `len > (std::usize::MAX/2)+1`
     ///
     /// [`BMRingBuf`]: struct.BMRingBuf.html
-    pub fn from_capacity(capacity: usize) -> Self {
+    pub fn from_len(len: usize) -> Self {
         let mut new_self = Self {
             vec: Vec::new(),
             mask: 0,
         };
 
-        new_self.set_capacity(capacity);
+        new_self.set_len(len);
 
         new_self
     }
 
-    /// Creates a new [`BMRingBuf`] with a capacity that is at least the given
-    /// capacity. The data in the buffer will not be initialized.
+    /// Creates a new [`BMRingBuf`] with a length that is at least the given
+    /// length. The data in the buffer will not be initialized.
     ///
-    /// * `capacity` - The capacity of the ring buffer. The actual capacity will be set
-    /// to the next highest power of 2 if `capacity` is not already a power of 2.
-    /// Capacity will be set to 2 if `capacity < 2`.
+    /// * `len` - The length of the ring buffer. The actual length will be set
+    /// to the next highest power of 2 if `len` is not already a power of 2.
+    /// The length will be set to 2 if `len < 2`.
     ///
     /// # Safety
     ///
@@ -183,33 +183,33 @@ impl<T: Copy + Clone + Default> BMRingBuf<T> {
     /// use bit_mask_ring_buf::BMRingBuf;
     ///
     /// unsafe {
-    ///     let rb = BMRingBuf::<u32>::from_capacity_uninit(3);
-    ///     assert_eq!(rb.capacity(), 4);
+    ///     let rb = BMRingBuf::<u32>::from_len_uninit(3);
+    ///     assert_eq!(rb.len(), 4);
     /// }
     /// ```
     ///
     /// # Panics
     ///
     /// * This will panic if this tries to allocate more than `isize::MAX` bytes
-    /// * This will panic if `capacity > (std::usize::MAX/2)+1`
+    /// * This will panic if `len > (std::usize::MAX/2)+1`
     ///
     /// [`BMRingBuf`]: struct.BMRingBuf.html
-    pub unsafe fn from_capacity_uninit(capacity: usize) -> Self {
+    pub unsafe fn from_len_uninit(len: usize) -> Self {
         let mut new_self = Self {
             vec: Vec::new(),
             mask: 0,
         };
 
-        new_self.set_capacity_uninit(capacity);
+        new_self.set_len_uninit(len);
 
         new_self
     }
 
-    /// Creates a new [`BMRingBuf`] with a capacity that holds at least a number of
-    /// frames/samples in a given time peroid. The actual capacity will be set to the
+    /// Creates a new [`BMRingBuf`] with a length that holds at least a number of
+    /// frames/samples in a given time peroid. The actual length will be set to the
     /// lowest power of 2 that can hold that many values.
     /// The buffer will be initialized with the default value.
-    /// The capacity will be set to 2 if the resulting capacity is less than 2.
+    /// The length will be set to 2 if the resulting length is less than 2.
     ///
     /// * `milliseconds` - The time period in milliseconds
     /// * `sample_rate` - The sample rate in samples per second
@@ -221,14 +221,14 @@ impl<T: Copy + Clone + Default> BMRingBuf<T> {
     /// use bit_mask_ring_buf::BMRingBuf;
     ///
     /// let rb = BMRingBuf::<f32>::from_ms(20.0, 44_100.0, 2);
-    /// assert_eq!(rb.capacity(), 1024);
+    /// assert_eq!(rb.len(), 1024);
     /// ```
     ///
     /// # Panics
     ///
     /// * This will panic if either `milliseconds` or `sample_rate` is less than 0
     /// * This will panic if this tries to allocate more than `isize::MAX` bytes
-    /// * This will panic if the resulting capacity is greater than `(std::usize::MAX/2)+1`
+    /// * This will panic if the resulting length is greater than `(std::usize::MAX/2)+1`
     ///
     /// [`BMRingBuf`]: struct.BMRingBuf.html
     pub fn from_ms(milliseconds: f64, sample_rate: f64, padding: usize) -> Self {
@@ -237,16 +237,16 @@ impl<T: Copy + Clone + Default> BMRingBuf<T> {
             mask: 0,
         };
 
-        new_self.set_capacity_from_ms(milliseconds, sample_rate, padding);
+        new_self.set_len_from_ms(milliseconds, sample_rate, padding);
 
         new_self
     }
 
-    /// Creates a new [`BMRingBuf`] with a capacity that holds at least a number of
+    /// Creates a new [`BMRingBuf`] with a length that holds at least a number of
     /// frames/samples in a given time peroid. The data in the buffer will not be
-    /// initialized. The actual capacity will be set to the lowest power of 2 that
-    /// can hold that many values. The capacity will be set to 2 if the resulting
-    /// capacity is less than 2.
+    /// initialized. The actual length will be set to the lowest power of 2 that
+    /// can hold that many values. The length will be set to 2 if the resulting
+    /// length is less than 2.
     ///
     /// * `milliseconds` - The time period in milliseconds
     /// * `sample_rate` - The sample rate in samples per second
@@ -259,7 +259,7 @@ impl<T: Copy + Clone + Default> BMRingBuf<T> {
     ///
     /// unsafe {
     ///     let rb = BMRingBuf::<f32>::from_ms_uninit(20.0, 44_100.0, 2);
-    ///     assert_eq!(rb.capacity(), 1024);
+    ///     assert_eq!(rb.len(), 1024);
     /// }
     /// ```
     ///
@@ -273,7 +273,7 @@ impl<T: Copy + Clone + Default> BMRingBuf<T> {
     ///
     /// * This will panic if either `milliseconds` or `sample_rate` is less than 0
     /// * This will panic if this tries to allocate more than `isize::MAX` bytes
-    /// * This will panic if the resulting capacity is greater than `(std::usize::MAX/2)+1`
+    /// * This will panic if the resulting length is greater than `(std::usize::MAX/2)+1`
     ///
     /// [`BMRingBuf`]: struct.BMRingBuf.html
     pub unsafe fn from_ms_uninit(milliseconds: f64, sample_rate: f64, padding: usize) -> Self {
@@ -282,29 +282,29 @@ impl<T: Copy + Clone + Default> BMRingBuf<T> {
             mask: 0,
         };
 
-        new_self.set_capacity_from_ms_uninit(milliseconds, sample_rate, padding);
+        new_self.set_len_from_ms_uninit(milliseconds, sample_rate, padding);
 
         new_self
     }
 
-    /// Sets the capacity of the ring buffer while clearing all values to the default value.
+    /// Sets the length of the ring buffer while clearing all values to the default value.
     ///
-    /// The actual capacity will be set to the next highest power of 2 if `capacity`
+    /// The actual length will be set to the next highest power of 2 if `len`
     /// is not already a power of 2.
-    /// The capacity will be set to 2 if `capacity < 2`.
+    /// The length will be set to 2 if `len < 2`.
     ///
     /// # Example
     ///
     /// ```
     /// use bit_mask_ring_buf::BMRingBuf;
     ///
-    /// let mut rb = BMRingBuf::<u32>::from_capacity(2);
+    /// let mut rb = BMRingBuf::<u32>::from_len(2);
     /// rb[0] = 1;
     /// rb[1] = 2;
     ///
-    /// rb.clear_set_capacity(3);
+    /// rb.clear_set_len(3);
     ///
-    /// assert_eq!(rb.capacity(), 4);
+    /// assert_eq!(rb.len(), 4);
     ///
     /// assert_eq!(rb[0], 0);
     /// assert_eq!(rb[1], 0);
@@ -315,36 +315,36 @@ impl<T: Copy + Clone + Default> BMRingBuf<T> {
     /// # Panics
     ///
     /// * This will panic if this tries to allocate more than `isize::MAX` bytes
-    /// * This will panic if `capacity > (std::usize::MAX/2)+1`
-    pub fn clear_set_capacity(&mut self, capacity: usize) {
+    /// * This will panic if `len > (std::usize::MAX/2)+1`
+    pub fn clear_set_len(&mut self, len: usize) {
         self.vec.clear();
-        self.vec.resize(next_pow_of_2(capacity), Default::default());
+        self.vec.resize(next_pow_of_2(len), Default::default());
         self.mask = (self.vec.len() as isize) - 1;
     }
 
-    /// Sets the capacity of the ring buffer.
+    /// Sets the length of the ring buffer.
     ///
-    /// * If the resulting capacity is less than the current capacity, then the data
+    /// * If the resulting length is less than the current length, then the data
     /// will be truncated.
-    /// * If the resulting capacity is larger than the current capacity, then all newly
+    /// * If the resulting length is larger than the current length, then all newly
     /// allocated elements appended to the end will be initialized with the default value.
     ///
-    /// The actual capacity will be set to the next highest power of 2 if `capacity`
+    /// The actual length will be set to the next highest power of 2 if `len`
     /// is not already a power of 2.
-    /// The capacity will be set to 2 if `capacity < 2`.
+    /// The length will be set to 2 if `len < 2`.
     ///
     /// # Example
     ///
     /// ```
     /// use bit_mask_ring_buf::BMRingBuf;
     ///
-    /// let mut rb = BMRingBuf::<u32>::from_capacity(2);
+    /// let mut rb = BMRingBuf::<u32>::from_len(2);
     /// rb[0] = 1;
     /// rb[1] = 2;
     ///
-    /// rb.set_capacity(3);
+    /// rb.set_len(3);
     ///
-    /// assert_eq!(rb.capacity(), 4);
+    /// assert_eq!(rb.len(), 4);
     ///
     /// assert_eq!(rb[0], 1);
     /// assert_eq!(rb[1], 2);
@@ -355,21 +355,21 @@ impl<T: Copy + Clone + Default> BMRingBuf<T> {
     /// # Panics
     ///
     /// * This will panic if this tries to allocate more than `isize::MAX` bytes
-    /// * This will panic if `capacity > (std::usize::MAX/2)+1`
-    pub fn set_capacity(&mut self, capacity: usize) {
-        let capacity = next_pow_of_2(capacity);
+    /// * This will panic if `len > (std::usize::MAX/2)+1`
+    pub fn set_len(&mut self, len: usize) {
+        let len = next_pow_of_2(len);
 
-        if capacity != self.vec.len() {
-            self.vec.resize(capacity, Default::default());
+        if len != self.vec.len() {
+            self.vec.resize(len, Default::default());
             self.mask = (self.vec.len() as isize) - 1;
         }
     }
 
-    /// Sets the capacity of the ring buffer without initializing any newly allocated data.
+    /// Sets the length of the ring buffer without initializing any newly allocated data.
     ///
-    /// * If the resulting capacity is less than the current capacity, then the data
+    /// * If the resulting length is less than the current length, then the data
     /// will be truncated.
-    /// * If the resulting capacity is larger than the current capacity, then all newly
+    /// * If the resulting length is larger than the current length, then all newly
     /// allocated elements appended to the end will be unitialized.
     ///
     /// # Safety
@@ -383,14 +383,14 @@ impl<T: Copy + Clone + Default> BMRingBuf<T> {
     /// ```
     /// use bit_mask_ring_buf::BMRingBuf;
     ///
-    /// let mut rb = BMRingBuf::<u32>::from_capacity(2);
+    /// let mut rb = BMRingBuf::<u32>::from_len(2);
     /// rb[0] = 1;
     /// rb[1] = 2;
     ///
     /// unsafe {
-    ///     rb.set_capacity_uninit(3);
+    ///     rb.set_len_uninit(3);
     ///
-    ///     assert_eq!(rb.capacity(), 4);
+    ///     assert_eq!(rb.len(), 4);
     ///
     ///     assert_eq!(rb[0], 1);
     ///     assert_eq!(rb[1], 2);
@@ -400,28 +400,28 @@ impl<T: Copy + Clone + Default> BMRingBuf<T> {
     /// # Panics
     ///
     /// * This will panic if this tries to allocate more than `isize::MAX` bytes
-    /// * This will panic if `capacity > (std::usize::MAX/2)+1`
-    pub unsafe fn set_capacity_uninit(&mut self, capacity: usize) {
-        let capacity = next_pow_of_2(capacity);
+    /// * This will panic if `len > (std::usize::MAX/2)+1`
+    pub unsafe fn set_len_uninit(&mut self, len: usize) {
+        let len = next_pow_of_2(len);
 
-        if capacity != self.vec.len() {
-            if capacity < self.vec.len() {
+        if len != self.vec.len() {
+            if len < self.vec.len() {
                 // Truncate data.
-                self.vec.resize(capacity, Default::default());
+                self.vec.resize(len, Default::default());
             } else {
                 // Extend without initializing.
-                self.vec.reserve_exact(capacity - self.vec.len());
-                self.vec.set_len(capacity);
+                self.vec.reserve_exact(len - self.vec.len());
+                self.vec.set_len(len);
             }
             self.mask = (self.vec.len() as isize) - 1;
         }
     }
 
-    /// Sets the capacity of the ring buffer to hold at least a number of
+    /// Sets the length of the ring buffer to hold at least a number of
     /// frames/samples in a given time peroid while clearing all values to the default value.
     ///
-    /// The actual capacity will be set to the lowest power of 2 that can hold that many values.
-    /// The capacity will be set to 2 if the resulting capacity is less than 2.
+    /// The actual length will be set to the lowest power of 2 that can hold that many values.
+    /// The length will be set to 2 if the resulting length is less than 2.
     ///
     /// * `milliseconds` - The time period in milliseconds
     /// * `sample_rate` - The sample rate in samples per second
@@ -432,13 +432,13 @@ impl<T: Copy + Clone + Default> BMRingBuf<T> {
     /// ```
     /// use bit_mask_ring_buf::BMRingBuf;
     ///
-    /// let mut rb = BMRingBuf::<f32>::from_capacity(2);
+    /// let mut rb = BMRingBuf::<f32>::from_len(2);
     /// rb[0] = 1.0;
     /// rb[1] = 2.0;
     ///
-    /// rb.clear_set_capacity_from_ms(2.0/44_100.0, 44_100.0, 2);
+    /// rb.clear_set_len_from_ms(2.0/44_100.0, 44_100.0, 2);
     ///
-    /// assert_eq!(rb.capacity(), 4);
+    /// assert_eq!(rb.len(), 4);
     ///
     /// assert_eq!(rb[0], 0.0);
     /// assert_eq!(rb[1], 0.0);
@@ -450,10 +450,10 @@ impl<T: Copy + Clone + Default> BMRingBuf<T> {
     ///
     /// * This will panic if either `milliseconds` or `sample_rate` is less than 0
     /// * This will panic if this tries to allocate more than `isize::MAX` bytes
-    /// * This will panic if the resulting capacity is greater than `(std::usize::MAX/2)+1`
+    /// * This will panic if the resulting length is greater than `(std::usize::MAX/2)+1`
     ///
     /// [`BMRingBuf`]: struct.BMRingBuf.html
-    pub fn clear_set_capacity_from_ms(
+    pub fn clear_set_len_from_ms(
         &mut self,
         milliseconds: f64,
         sample_rate: f64,
@@ -462,21 +462,21 @@ impl<T: Copy + Clone + Default> BMRingBuf<T> {
         assert!(milliseconds >= 0.0);
         assert!(sample_rate >= 0.0);
 
-        let capacity = (milliseconds * MS_TO_SEC_RATIO * sample_rate).ceil() as usize + padding;
-        self.clear_set_capacity(capacity);
+        let len = (milliseconds * MS_TO_SEC_RATIO * sample_rate).ceil() as usize + padding;
+        self.clear_set_len(len);
     }
 
-    /// Sets the capacity of the ring buffer to hold at least a number of
+    /// Sets the length of the ring buffer to hold at least a number of
     /// frames/samples in a given time peroid.
     ///
-    /// * If the resulting capacity is less than the current capacity, then the data
+    /// * If the resulting length is less than the current length, then the data
     /// will be truncated.
-    /// * If the resulting capacity is larger than the current capacity, then all newly
+    /// * If the resulting length is larger than the current length, then all newly
     /// allocated elements appended to the end will be initialized with the default value.
     ///
-    /// The actual capacity will be set to the
+    /// The actual length will be set to the
     /// lowest power of 2 that can hold that many values.
-    /// The capacity will be set to 2 if the resulting capacity is less than 2.
+    /// The length will be set to 2 if the resulting length is less than 2.
     ///
     /// * `milliseconds` - The time period in milliseconds
     /// * `sample_rate` - The sample rate in samples per second
@@ -487,13 +487,13 @@ impl<T: Copy + Clone + Default> BMRingBuf<T> {
     /// ```
     /// use bit_mask_ring_buf::BMRingBuf;
     ///
-    /// let mut rb = BMRingBuf::<f32>::from_capacity(2);
+    /// let mut rb = BMRingBuf::<f32>::from_len(2);
     /// rb[0] = 1.0;
     /// rb[1] = 2.0;
     ///
-    /// rb.set_capacity_from_ms(2.0/44_100.0, 44_100.0, 2);
+    /// rb.set_len_from_ms(2.0/44_100.0, 44_100.0, 2);
     ///
-    /// assert_eq!(rb.capacity(), 4);
+    /// assert_eq!(rb.len(), 4);
     ///
     /// assert_eq!(rb[0], 1.0);
     /// assert_eq!(rb[1], 2.0);
@@ -505,29 +505,29 @@ impl<T: Copy + Clone + Default> BMRingBuf<T> {
     ///
     /// * This will panic if either `milliseconds` or `sample_rate` is less than 0
     /// * This will panic if this tries to allocate more than `isize::MAX` bytes
-    /// * This will panic if the resulting capacity is greater than `(std::usize::MAX/2)+1`
+    /// * This will panic if the resulting length is greater than `(std::usize::MAX/2)+1`
     ///
     /// [`BMRingBuf`]: struct.BMRingBuf.html
-    pub fn set_capacity_from_ms(&mut self, milliseconds: f64, sample_rate: f64, padding: usize) {
+    pub fn set_len_from_ms(&mut self, milliseconds: f64, sample_rate: f64, padding: usize) {
         assert!(milliseconds >= 0.0);
         assert!(sample_rate >= 0.0);
 
-        let capacity = (milliseconds * MS_TO_SEC_RATIO * sample_rate).ceil() as usize + padding;
-        self.set_capacity(capacity);
+        let len = (milliseconds * MS_TO_SEC_RATIO * sample_rate).ceil() as usize + padding;
+        self.set_len(len);
     }
 
-    /// Sets the capacity of the ring buffer to hold at least a number of
+    /// Sets the length of the ring buffer to hold at least a number of
     /// frames/samples in a given time peroid. Any newly allocated data will not be
     /// initialized.
     ///
-    /// * If the resulting capacity is less than the current capacity, then the data
+    /// * If the resulting length is less than the current length, then the data
     /// will be truncated.
-    /// * If the resulting capacity is larger than the current capacity, then all newly
+    /// * If the resulting length is larger than the current length, then all newly
     /// allocated elements appended to the end will be unitialized.
     ///
-    /// The actual capacity will be set to the lowest power of 2 that
-    /// can hold that many values. The capacity will be set to 2 if the resulting
-    /// capacity is less than 2.
+    /// The actual length will be set to the lowest power of 2 that
+    /// can hold that many values. The length will be set to 2 if the resulting
+    /// length is less than 2.
     ///
     /// * `milliseconds` - The time period in milliseconds
     /// * `sample_rate` - The sample rate in samples per second
@@ -544,14 +544,14 @@ impl<T: Copy + Clone + Default> BMRingBuf<T> {
     /// ```
     /// use bit_mask_ring_buf::BMRingBuf;
     ///
-    /// let mut rb = BMRingBuf::<f32>::from_capacity(2);
+    /// let mut rb = BMRingBuf::<f32>::from_len(2);
     /// rb[0] = 1.0;
     /// rb[1] = 2.0;
     ///
     /// unsafe {
-    ///     rb.set_capacity_from_ms_uninit(2.0/44_100.0, 44_100.0, 2);
+    ///     rb.set_len_from_ms_uninit(2.0/44_100.0, 44_100.0, 2);
     ///
-    ///     assert_eq!(rb.capacity(), 4);
+    ///     assert_eq!(rb.len(), 4);
     ///
     ///     assert_eq!(rb[0], 1.0);
     ///     assert_eq!(rb[1], 2.0);
@@ -562,10 +562,10 @@ impl<T: Copy + Clone + Default> BMRingBuf<T> {
     ///
     /// * This will panic if either `milliseconds` or `sample_rate` is less than 0
     /// * This will panic if this tries to allocate more than `isize::MAX` bytes
-    /// * This will panic if the resulting capacity is greater than `(std::usize::MAX/2)+1`
+    /// * This will panic if the resulting length is greater than `(std::usize::MAX/2)+1`
     ///
     /// [`BMRingBuf`]: struct.BMRingBuf.html
-    pub unsafe fn set_capacity_from_ms_uninit(
+    pub unsafe fn set_len_from_ms_uninit(
         &mut self,
         milliseconds: f64,
         sample_rate: f64,
@@ -574,8 +574,8 @@ impl<T: Copy + Clone + Default> BMRingBuf<T> {
         assert!(milliseconds >= 0.0);
         assert!(sample_rate >= 0.0);
 
-        let capacity = (milliseconds * MS_TO_SEC_RATIO * sample_rate).ceil() as usize + padding;
-        self.set_capacity_uninit(capacity);
+        let len = (milliseconds * MS_TO_SEC_RATIO * sample_rate).ceil() as usize + padding;
+        self.set_len_uninit(len);
     }
 
     /// Clears all values in the ring buffer to the default value.
@@ -585,7 +585,7 @@ impl<T: Copy + Clone + Default> BMRingBuf<T> {
     /// ```
     /// use bit_mask_ring_buf::BMRingBuf;
     ///
-    /// let mut rb = BMRingBuf::<u32>::from_capacity(2);
+    /// let mut rb = BMRingBuf::<u32>::from_len(2);
     /// rb[0] = 1;
     /// rb[1] = 2;
     ///
@@ -615,7 +615,7 @@ impl<T: Copy + Clone + Default> BMRingBuf<T> {
     /// ```
     /// use bit_mask_ring_buf::BMRingBuf;
     ///
-    /// let mut rb = BMRingBuf::<u32>::from_capacity(4);
+    /// let mut rb = BMRingBuf::<u32>::from_len(4);
     /// rb[0] = 1;
     /// rb[1] = 2;
     /// rb[2] = 3;
@@ -636,7 +636,7 @@ impl<T: Copy + Clone + Default> BMRingBuf<T> {
         // whose length is a power of 2.
         //
         // Both the length of self.vec and the value of self.mask are only modified
-        // in self.set_capacity(). This function makes sure these values are valid.
+        // in self.set_len(). This function makes sure these values are valid.
         // The constructors also correctly call this function.
         //
         // Memory is created and initialized by a Vec, so it is always valid.
@@ -654,7 +654,7 @@ impl<T: Copy + Clone + Default> BMRingBuf<T> {
     ///
     /// * `start` - The starting index
     /// * `len` - The length of data to read. If `len` is greater than the
-    /// capacity of the ring buffer, then that capacity will be used instead.
+    /// length of the ring buffer, then the buffer's length will be used instead.
     ///
     /// # Returns
     ///
@@ -668,7 +668,7 @@ impl<T: Copy + Clone + Default> BMRingBuf<T> {
     /// ```
     /// use bit_mask_ring_buf::BMRingBuf;
     ///
-    /// let mut rb = BMRingBuf::<u32>::from_capacity(4);
+    /// let mut rb = BMRingBuf::<u32>::from_len(4);
     /// rb[0] = 1;
     /// rb[1] = 2;
     /// rb[2] = 3;
@@ -689,7 +689,7 @@ impl<T: Copy + Clone + Default> BMRingBuf<T> {
         // whose length is a power of 2.
         //
         // Both the length of self.vec and the value of self.mask are only modified
-        // in self.set_capacity(). This function makes sure these values are valid.
+        // in self.set_len(). This function makes sure these values are valid.
         // The constructors also correctly call this function.
         //
         // Memory is created and initialized by a Vec, so it is always valid.
@@ -727,7 +727,7 @@ impl<T: Copy + Clone + Default> BMRingBuf<T> {
     /// ```
     /// use bit_mask_ring_buf::BMRingBuf;
     ///
-    /// let mut rb = BMRingBuf::<u32>::from_capacity(4);
+    /// let mut rb = BMRingBuf::<u32>::from_len(4);
     /// rb[0] = 1;
     /// rb[1] = 2;
     /// rb[2] = 3;
@@ -748,7 +748,7 @@ impl<T: Copy + Clone + Default> BMRingBuf<T> {
         // whose length is a power of 2.
         //
         // Both the length of self.vec and the value of self.mask are only modified
-        // in self.set_capacity(). This function makes sure these values are valid.
+        // in self.set_len(). This function makes sure these values are valid.
         // The constructors also correctly call this function.
         //
         // Memory is created and initialized by a Vec, so it is always valid.
@@ -769,7 +769,7 @@ impl<T: Copy + Clone + Default> BMRingBuf<T> {
     ///
     /// * `start` - The starting index
     /// * `len` - The length of data to read. If `len` is greater than the
-    /// capacity of the ring buffer, then that capacity will be used instead.
+    /// length of the ring buffer, then the buffer's length will be used instead.
     ///
     /// # Returns
     ///
@@ -783,7 +783,7 @@ impl<T: Copy + Clone + Default> BMRingBuf<T> {
     /// ```
     /// use bit_mask_ring_buf::BMRingBuf;
     ///
-    /// let mut rb = BMRingBuf::<u32>::from_capacity(4);
+    /// let mut rb = BMRingBuf::<u32>::from_len(4);
     /// rb[0] = 1;
     /// rb[1] = 2;
     /// rb[2] = 3;
@@ -804,7 +804,7 @@ impl<T: Copy + Clone + Default> BMRingBuf<T> {
         // whose length is a power of 2.
         //
         // Both the length of self.vec and the value of self.mask are only modified
-        // in self.set_capacity(). This function makes sure these values are valid.
+        // in self.set_len(). This function makes sure these values are valid.
         // The constructors also correctly call this function.
         //
         // Memory is created and initialized by a Vec, so it is always valid.
@@ -832,7 +832,7 @@ impl<T: Copy + Clone + Default> BMRingBuf<T> {
 
     /// Copies the data from the ring buffer starting from the index `start`
     /// into the given slice. If the length of `slice` is larger than the
-    /// capacity of the ring buffer, then the data will be reapeated until
+    /// length of the ring buffer, then the data will be reapeated until
     /// the given slice is filled.
     ///
     /// * `slice` - This slice to copy the data into.
@@ -843,7 +843,7 @@ impl<T: Copy + Clone + Default> BMRingBuf<T> {
     /// ```
     /// use bit_mask_ring_buf::BMRingBuf;
     ///
-    /// let mut rb = BMRingBuf::<u32>::from_capacity(4);
+    /// let mut rb = BMRingBuf::<u32>::from_len(4);
     /// rb[0] = 1;
     /// rb[1] = 2;
     /// rb[2] = 3;
@@ -864,7 +864,7 @@ impl<T: Copy + Clone + Default> BMRingBuf<T> {
         // whose length is a power of 2.
         //
         // Both the length of self.vec and the value of self.mask are only modified
-        // in self.set_capacity(). This function makes sure these values are valid.
+        // in self.set_len(). This function makes sure these values are valid.
         // The constructors also correctly call this function.
         //
         // Memory is created and initialized by a Vec, so it is always valid.
@@ -917,7 +917,7 @@ impl<T: Copy + Clone + Default> BMRingBuf<T> {
     /// ```
     /// use bit_mask_ring_buf::BMRingBuf;
     ///
-    /// let mut rb = BMRingBuf::<u32>::from_capacity(4);
+    /// let mut rb = BMRingBuf::<u32>::from_len(4);
     ///
     /// let input = [1u32, 2, 3];
     /// rb.write_latest(&input[..], -3);
@@ -950,7 +950,7 @@ impl<T: Copy + Clone + Default> BMRingBuf<T> {
         // whose length is a power of 2.
         //
         // Both the length of self.vec and the value of self.mask are only modified
-        // in self.set_capacity(). This function makes sure these values are valid.
+        // in self.set_len(). This function makes sure these values are valid.
         // The constructors also correctly call this function.
         //
         // Memory is created and initialized by a Vec, so it is always valid.
@@ -1001,13 +1001,13 @@ impl<T: Copy + Clone + Default> BMRingBuf<T> {
     /// ```
     /// use bit_mask_ring_buf::BMRingBuf;
     ///
-    /// let mut input_rb = BMRingBuf::<u32>::from_capacity(4);
+    /// let mut input_rb = BMRingBuf::<u32>::from_len(4);
     /// input_rb[0] = 1;
     /// input_rb[1] = 2;
     /// input_rb[2] = 3;
     /// input_rb[3] = 4;
     ///
-    /// let mut output_rb = BMRingBuf::<u32>::from_capacity(4);
+    /// let mut output_rb = BMRingBuf::<u32>::from_len(4);
     /// // s1 == &[1, 2], s2 == &[]
     /// let (s1, s2) = input_rb.as_slices_len(0, 2);
     /// output_rb.write_latest_2(s1, s2, -3);
@@ -1016,7 +1016,7 @@ impl<T: Copy + Clone + Default> BMRingBuf<T> {
     /// assert_eq!(output_rb[2], 2);
     /// assert_eq!(output_rb[3], 0);
     ///
-    /// let mut output_rb = BMRingBuf::<u32>::from_capacity(2);
+    /// let mut output_rb = BMRingBuf::<u32>::from_len(2);
     /// // s1 == &[4],  s2 == &[1, 2, 3]
     /// let (s1, s2) = input_rb.as_slices_len(3, 4);
     /// // rb[1] = 4  ->  rb[0] = 1  ->  rb[1] = 2  ->  rb[0] = 3
@@ -1041,17 +1041,17 @@ impl<T: Copy + Clone + Default> BMRingBuf<T> {
         self.write_latest(second, start + first.len() as isize);
     }
 
-    /// Returns the capacity of the ring buffer.
+    /// Returns the length of the ring buffer.
     ///
     /// # Example
     ///
     /// ```
     /// use bit_mask_ring_buf::BMRingBuf;
-    /// let rb = BMRingBuf::<u32>::from_capacity(4);
+    /// let rb = BMRingBuf::<u32>::from_len(4);
     ///
-    /// assert_eq!(rb.capacity(), 4);
+    /// assert_eq!(rb.len(), 4);
     /// ```
-    pub fn capacity(&self) -> usize {
+    pub fn len(&self) -> usize {
         self.vec.len()
     }
 
@@ -1063,7 +1063,7 @@ impl<T: Copy + Clone + Default> BMRingBuf<T> {
     ///
     /// ```
     /// use bit_mask_ring_buf::BMRingBuf;
-    /// let rb = BMRingBuf::<u32>::from_capacity(4);
+    /// let rb = BMRingBuf::<u32>::from_len(4);
     ///
     /// assert_eq!(rb.constrain(2), 2);
     /// assert_eq!(rb.constrain(4), 0);
@@ -1081,7 +1081,7 @@ impl<T: Copy + Clone + Default> BMRingBuf<T> {
     ///
     /// ```
     /// use bit_mask_ring_buf::BMRingBuf;
-    /// let mut rb = BMRingBuf::<u32>::from_capacity(4);
+    /// let mut rb = BMRingBuf::<u32>::from_len(4);
     /// rb[0] = 1;
     /// rb[1] = 2;
     /// rb[2] = 3;
@@ -1101,7 +1101,7 @@ impl<T: Copy + Clone + Default> BMRingBuf<T> {
     ///
     /// ```
     /// use bit_mask_ring_buf::BMRingBuf;
-    /// let mut rb = BMRingBuf::<u32>::from_capacity(4);
+    /// let mut rb = BMRingBuf::<u32>::from_len(4);
     /// rb[0] = 1;
     /// rb[1] = 2;
     /// rb[2] = 3;
@@ -1123,7 +1123,7 @@ impl<T: Copy + Clone + Default> BMRingBuf<T> {
     ///
     /// ```
     /// use bit_mask_ring_buf::BMRingBuf;
-    /// let mut rb = BMRingBuf::<u32>::from_capacity(4);
+    /// let mut rb = BMRingBuf::<u32>::from_len(4);
     /// rb[0] = 1;
     /// rb[3] = 4;
     ///
@@ -1152,7 +1152,7 @@ impl<T: Copy + Clone + Default> BMRingBuf<T> {
     ///
     /// ```
     /// use bit_mask_ring_buf::BMRingBuf;
-    /// let mut rb = BMRingBuf::<u32>::from_capacity(4);
+    /// let mut rb = BMRingBuf::<u32>::from_len(4);
     ///
     /// *rb.raw_at_mut(0) = 1;
     /// *rb.raw_at_mut(3) = 4;
@@ -1181,7 +1181,7 @@ impl<T: Copy + Clone + Default> BMRingBuf<T> {
     ///
     /// ```
     /// use bit_mask_ring_buf::BMRingBuf;
-    /// let mut rb = BMRingBuf::<u32>::from_capacity(4);
+    /// let mut rb = BMRingBuf::<u32>::from_len(4);
     /// rb[0] = 1;
     /// rb[1] = 2;
     /// rb[2] = 3;
@@ -1199,7 +1199,7 @@ impl<T: Copy + Clone + Default> BMRingBuf<T> {
         // whose length is a power of 2.
         //
         // Both the length of self.vec and the value of self.mask are only modified
-        // in self.set_capacity(). This function makes sure these values are valid.
+        // in self.set_len(). This function makes sure these values are valid.
         // The constructors also correctly call this function.
         //
         // Memory is created and initialized by a Vec, so it is always valid.
@@ -1214,7 +1214,7 @@ impl<T: Copy + Clone + Default> BMRingBuf<T> {
     ///
     /// ```
     /// use bit_mask_ring_buf::BMRingBuf;
-    /// let mut rb = BMRingBuf::<u32>::from_capacity(4);
+    /// let mut rb = BMRingBuf::<u32>::from_len(4);
     ///
     /// let mut i = -3;
     /// *rb.at_mut(&mut i) = 2;
@@ -1230,7 +1230,7 @@ impl<T: Copy + Clone + Default> BMRingBuf<T> {
         // whose length is a power of 2.
         //
         // Both the length of self.vec and the value of self.mask are only modified
-        // in self.set_capacity(). This function makes sure these values are valid.
+        // in self.set_len(). This function makes sure these values are valid.
         // The constructors also correctly call this function.
         //
         // Memory is created and initialized by a Vec, so it is always valid.
@@ -1245,7 +1245,7 @@ impl<T: Copy + Clone + Default> std::ops::Index<isize> for BMRingBuf<T> {
         // whose length is a power of 2.
         //
         // Both the length of self.vec and the value of self.mask are only modified
-        // in self.set_capacity(). This function makes sure these values are valid.
+        // in self.set_len(). This function makes sure these values are valid.
         // The constructors also correctly call this function.
         //
         // Memory is created and initialized by a Vec, so it is always valid.
@@ -1259,7 +1259,7 @@ impl<T: Copy + Clone + Default> std::ops::IndexMut<isize> for BMRingBuf<T> {
         // whose length is a power of 2.
         //
         // Both the length of self.vec and the value of self.mask are only modified
-        // in self.set_capacity(). This function makes sure these values are valid.
+        // in self.set_len(). This function makes sure these values are valid.
         // The constructors also correctly call this function.
         //
         // Memory is created and initialized by a Vec, so it is always valid.
@@ -1299,7 +1299,7 @@ mod tests {
 
     #[test]
     fn bit_mask_ring_buf_initialize() {
-        let ring_buf = BMRingBuf::<f32>::from_capacity(3);
+        let ring_buf = BMRingBuf::<f32>::from_len(3);
 
         assert_eq!(&ring_buf.vec[..], &[0.0, 0.0, 0.0, 0.0]);
     }
@@ -1307,56 +1307,56 @@ mod tests {
     #[test]
     fn bit_mask_ring_buf_initialize_uninit() {
         unsafe {
-            let ring_buf = BMRingBuf::<f32>::from_capacity_uninit(3);
+            let ring_buf = BMRingBuf::<f32>::from_len_uninit(3);
 
             assert_eq!(ring_buf.vec.len(), 4);
         }
     }
 
     #[test]
-    fn bit_mask_ring_buf_clear_set_capacity() {
-        let mut ring_buf = BMRingBuf::<f32>::from_capacity(4);
+    fn bit_mask_ring_buf_clear_set_len() {
+        let mut ring_buf = BMRingBuf::<f32>::from_len(4);
         ring_buf[0] = 1.0;
         ring_buf[1] = 2.0;
         ring_buf[2] = 3.0;
         ring_buf[3] = 4.0;
 
-        ring_buf.clear_set_capacity(8);
+        ring_buf.clear_set_len(8);
         assert_eq!(ring_buf.vec.as_slice(), &[0.0; 8]);
     }
 
     #[test]
-    fn bit_mask_ring_buf_set_capacity() {
-        let mut ring_buf = BMRingBuf::<f32>::from_capacity(4);
+    fn bit_mask_ring_buf_set_len() {
+        let mut ring_buf = BMRingBuf::<f32>::from_len(4);
         ring_buf[0] = 1.0;
         ring_buf[1] = 2.0;
         ring_buf[2] = 3.0;
         ring_buf[3] = 4.0;
 
-        ring_buf.set_capacity(1);
+        ring_buf.set_len(1);
         assert_eq!(ring_buf.vec.as_slice(), &[1.0, 2.0]);
 
-        ring_buf.set_capacity(4);
+        ring_buf.set_len(4);
         assert_eq!(ring_buf.vec.as_slice(), &[1.0, 2.0, 0.0, 0.0]);
     }
 
     #[test]
-    fn bit_mask_ring_buf_set_capacity_uninit() {
-        let mut ring_buf = BMRingBuf::<f32>::from_capacity(4);
+    fn bit_mask_ring_buf_set_len_uninit() {
+        let mut ring_buf = BMRingBuf::<f32>::from_len(4);
         ring_buf[0] = 1.0;
         ring_buf[1] = 2.0;
         ring_buf[2] = 3.0;
         ring_buf[3] = 4.0;
 
         unsafe {
-            ring_buf.set_capacity_uninit(1);
+            ring_buf.set_len_uninit(1);
         }
 
         assert_eq!(ring_buf.vec.as_slice(), &[1.0, 2.0]);
         assert_eq!(ring_buf.vec.len(), 2);
 
         unsafe {
-            ring_buf.set_capacity_uninit(4);
+            ring_buf.set_len_uninit(4);
         }
 
         assert_eq!(ring_buf.vec.len(), 4);
@@ -1364,7 +1364,7 @@ mod tests {
 
     #[test]
     fn bit_mask_ring_buf_constrain() {
-        let ring_buf = BMRingBuf::<f32>::from_capacity(4);
+        let ring_buf = BMRingBuf::<f32>::from_len(4);
 
         assert_eq!(ring_buf.constrain(-8), 0);
         assert_eq!(ring_buf.constrain(-7), 1);
@@ -1387,7 +1387,7 @@ mod tests {
 
     #[test]
     fn bit_mask_ring_buf_clear() {
-        let mut ring_buf = BMRingBuf::<f32>::from_capacity(4);
+        let mut ring_buf = BMRingBuf::<f32>::from_len(4);
 
         ring_buf.write_latest(&[1.0f32, 2.0, 3.0, 4.0], 0);
         assert_eq!(ring_buf.vec.as_slice(), &[1.0, 2.0, 3.0, 4.0]);
@@ -1398,7 +1398,7 @@ mod tests {
 
     #[test]
     fn bit_mask_ring_buf_index() {
-        let mut ring_buf = BMRingBuf::<f32>::from_capacity(4);
+        let mut ring_buf = BMRingBuf::<f32>::from_len(4);
         ring_buf.write_latest(&[0.0f32, 1.0, 2.0, 3.0], 0);
 
         let ring_buf = &ring_buf;
@@ -1424,7 +1424,7 @@ mod tests {
 
     #[test]
     fn bit_mask_ring_buf_index_mut() {
-        let mut ring_buf = BMRingBuf::<f32>::from_capacity(4);
+        let mut ring_buf = BMRingBuf::<f32>::from_len(4);
         ring_buf.write_latest(&[0.0f32, 1.0, 2.0, 3.0], 0);
 
         assert_eq!(&mut ring_buf[-8], &mut 0.0);
@@ -1448,7 +1448,7 @@ mod tests {
 
     #[test]
     fn bit_mask_ring_buf_as_slices() {
-        let mut ring_buf = BMRingBuf::<f32>::from_capacity(4);
+        let mut ring_buf = BMRingBuf::<f32>::from_len(4);
         ring_buf.write_latest(&[1.0f32, 2.0, 3.0, 4.0], 0);
 
         let (s1, s2) = ring_buf.as_slices(0);
@@ -1474,7 +1474,7 @@ mod tests {
 
     #[test]
     fn bit_mask_ring_buf_as_mut_slices() {
-        let mut ring_buf = BMRingBuf::<f32>::from_capacity(4);
+        let mut ring_buf = BMRingBuf::<f32>::from_len(4);
         ring_buf.write_latest(&[1.0f32, 2.0, 3.0, 4.0], 0);
 
         let (s1, s2) = ring_buf.as_mut_slices(0);
@@ -1521,7 +1521,7 @@ mod tests {
 
     #[test]
     fn bit_mask_ring_buf_write_latest_2() {
-        let mut ring_buf = BMRingBuf::<f32>::from_capacity(4);
+        let mut ring_buf = BMRingBuf::<f32>::from_len(4);
 
         ring_buf.write_latest_2(&[], &[0.0, 1.0, 2.0, 3.0, 4.0], 1);
         assert_eq!(ring_buf.vec.as_slice(), &[3.0, 4.0, 1.0, 2.0]);
@@ -1551,7 +1551,7 @@ mod tests {
 
     #[test]
     fn bit_mask_ring_buf_write_latest() {
-        let mut ring_buf = BMRingBuf::<f32>::from_capacity(4);
+        let mut ring_buf = BMRingBuf::<f32>::from_len(4);
 
         let input = [0.0f32, 1.0, 2.0, 3.0];
 
@@ -1623,7 +1623,7 @@ mod tests {
 
     #[test]
     fn bit_mask_ring_buf_as_slices_len() {
-        let mut ring_buf = BMRingBuf::<f32>::from_capacity(4);
+        let mut ring_buf = BMRingBuf::<f32>::from_len(4);
         ring_buf.write_latest(&[0.0, 1.0, 2.0, 3.0], 0);
 
         let (s1, s2) = ring_buf.as_slices_len(0, 0);
@@ -1724,7 +1724,7 @@ mod tests {
 
     #[test]
     fn bit_mask_ring_buf_as_mut_slices_len() {
-        let mut ring_buf = BMRingBuf::<f32>::from_capacity(4);
+        let mut ring_buf = BMRingBuf::<f32>::from_len(4);
         ring_buf.write_latest(&[0.0, 1.0, 2.0, 3.0], 0);
 
         let (s1, s2) = ring_buf.as_mut_slices_len(0, 0);
@@ -1825,7 +1825,7 @@ mod tests {
 
     #[test]
     fn bit_mask_ring_buf_read_into() {
-        let mut ring_buf = BMRingBuf::<f32>::from_capacity(4);
+        let mut ring_buf = BMRingBuf::<f32>::from_len(4);
         ring_buf.write_latest(&[0.0, 1.0, 2.0, 3.0], 0);
 
         let mut output = [0.0f32; 4];

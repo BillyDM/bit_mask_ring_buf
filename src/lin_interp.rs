@@ -11,7 +11,7 @@ impl BMRingBuf<f32> {
     ///
     /// ```
     /// use bit_mask_ring_buf::BMRingBuf;
-    /// let mut rb = BMRingBuf::<f32>::from_capacity(4);
+    /// let mut rb = BMRingBuf::<f32>::from_len(4);
     /// rb[0] = 0.0;
     /// rb[1] = 2.0;
     /// rb[2] = 4.0;
@@ -41,7 +41,7 @@ impl BMRingBuf<f32> {
     ///
     /// ```
     /// use bit_mask_ring_buf::BMRingBuf;
-    /// let mut rb = BMRingBuf::<f32>::from_capacity(4);
+    /// let mut rb = BMRingBuf::<f32>::from_len(4);
     /// rb[0] = 0.0;
     /// rb[1] = 2.0;
     /// rb[2] = 4.0;
@@ -129,7 +129,7 @@ impl BMRingBuf<f64> {
     ///
     /// ```
     /// use bit_mask_ring_buf::BMRingBuf;
-    /// let mut rb = BMRingBuf::<f64>::from_capacity(4);
+    /// let mut rb = BMRingBuf::<f64>::from_len(4);
     /// rb[0] = 0.0;
     /// rb[1] = 2.0;
     /// rb[2] = 4.0;
@@ -159,7 +159,7 @@ impl BMRingBuf<f64> {
     ///
     /// ```
     /// use bit_mask_ring_buf::BMRingBuf;
-    /// let mut rb = BMRingBuf::<f64>::from_capacity(4);
+    /// let mut rb = BMRingBuf::<f64>::from_len(4);
     /// rb[0] = 0.0;
     /// rb[1] = 2.0;
     /// rb[2] = 4.0;
@@ -243,7 +243,7 @@ mod tests {
     use super::*;
     #[test]
     fn bit_mask_ring_buf_f32_lin_interp_f32() {
-        let mut ring_buf = BMRingBuf::<f32>::from_capacity(4);
+        let mut ring_buf = BMRingBuf::<f32>::from_len(4);
         ring_buf[0] = 0.0;
         ring_buf[1] = 2.0;
         ring_buf[2] = 4.0;
@@ -280,7 +280,7 @@ mod tests {
 
     #[test]
     fn bit_mask_ring_buf_f32_lin_interp_f64() {
-        let mut ring_buf = BMRingBuf::<f32>::from_capacity(4);
+        let mut ring_buf = BMRingBuf::<f32>::from_len(4);
         ring_buf[0] = 0.0;
         ring_buf[1] = 2.0;
         ring_buf[2] = 4.0;
@@ -385,7 +385,7 @@ mod tests {
 
     #[test]
     fn bit_mask_ring_buf_f64_lin_interp_f32() {
-        let mut ring_buf = BMRingBuf::<f64>::from_capacity(4);
+        let mut ring_buf = BMRingBuf::<f64>::from_len(4);
         ring_buf[0] = 0.0;
         ring_buf[1] = 2.0;
         ring_buf[2] = 4.0;
@@ -422,7 +422,7 @@ mod tests {
 
     #[test]
     fn bit_mask_ring_buf_f64_lin_interp_f64() {
-        let mut ring_buf = BMRingBuf::<f64>::from_capacity(4);
+        let mut ring_buf = BMRingBuf::<f64>::from_len(4);
         ring_buf[0] = 0.0;
         ring_buf[1] = 2.0;
         ring_buf[2] = 4.0;
