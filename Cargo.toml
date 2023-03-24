@@ -1,12 +1,12 @@
 [package]
 name = "bit_mask_ring_buf"
-version = "0.5.2"
+version = "0.5.3"
 authors = ["Billy Messenger <https://github.com/BillyDM>"]
 license = "MIT"
 keywords = ["ring", "circular", "buffer", "dsp"]
 categories = ["data-structures"]
 edition = "2018"
-description = "A fast ring buffer implementation with cheap and safe indexing"
+description = "A ring buffer implementation with cheap indexing"
 repository = "https://github.com/BillyDM/bit_mask_ring_buf"
 documentation = "https://docs.rs/bit_mask_ring_buf"
 readme = "README.md"

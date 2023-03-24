@@ -4,11 +4,11 @@
 [![Crates.io](https://img.shields.io/crates/v/bit_mask_ring_buf.svg)](https://crates.io/crates/bit_mask_ring_buf)
 [![License](https://img.shields.io/crates/l/bit_mask_ring_buf.svg)](https://github.com/BillyDM/bit_mask_ring_buf/blob/master/LICENSE)
 
-A fast ring buffer implementation with cheap and safe indexing written in Rust. It works by bit-masking an integer index to get the corresponding index in an array/vec whose length is a power of 2. This is best used when indexing the buffer with an `isize` value. Copies/reads with slices are implemented with memcpy. This is most useful for high performance algorithms such as audio DSP.
+A ring buffer implementation with cheap indexing written in Rust.
+
+Note, this crate is only beneficial if your algorithm indexes elements one at a time and has buffer sizes that are always a power of two. If your algorithm instead reads chunks of data as slices or requires buffer sizes that are not a power of two, then check out my crate [`slice_ring_buf`].
 
 This crate has no consumer/producer logic, and is meant to be used as a raw data structure or a base for other data structures.
-
-If your use case needs a buffer with a length that is not a power of 2, and the performance of indexing individual elements one at a time does not matter, then take a look at my crate [`slice_ring_buf`].
 
 ## Installation
 Add `bit_mask_ring_buf` as a dependency in your `Cargo.toml`:
