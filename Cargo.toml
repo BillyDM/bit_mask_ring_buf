@@ -1,11 +1,11 @@
 [package]
 name = "bit_mask_ring_buf"
-version = "0.5.3"
-authors = ["Billy Messenger <https://github.com/BillyDM>"]
+version = "0.6.0"
+authors = ["Billy Messenger <60663878+BillyDM@users.noreply.github.com>"]
 license = "MIT"
 keywords = ["ring", "circular", "buffer", "dsp"]
-categories = ["data-structures"]
-edition = "2018"
+categories = ["data-structures", "no-std", "no-std::no-alloc"]
+edition = "2021"
 description = "A ring buffer implementation with cheap indexing"
 repository = "https://github.com/BillyDM/bit_mask_ring_buf"
 documentation = "https://docs.rs/bit_mask_ring_buf"
@@ -15,5 +15,10 @@ readme = "README.md"
 maintenance = { status = "passively-maintained" }
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[features]
+default = ["alloc"]
+# Enables the `BitMaskRB` struct containing owned data on the heap.
+alloc = []
 
 [dependencies]
