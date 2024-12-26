@@ -21,7 +21,7 @@ use crate::inner::{self, Mask};
 /// let rb_ref = BitMaskRbRef::new(&stack_data);
 /// assert_eq!(rb_ref[-3], 1);
 /// ```
-/// 
+///
 /// [`BitMaskRB`]: struct.BitMaskRB.html
 pub struct BitMaskRbRef<'a, T> {
     data: &'a [T],
@@ -377,7 +377,7 @@ impl<'a, T: Clone + Copy> BitMaskRbRef<'a, T> {
 /// assert_eq!(rb_ref[2], 2);
 /// assert_eq!(rb_ref[3], 3);
 /// ```
-/// 
+///
 /// [`BitMaskRB`]: struct.BitMaskRB.html
 pub struct BitMaskRbRefMut<'a, T> {
     data: &'a mut [T],

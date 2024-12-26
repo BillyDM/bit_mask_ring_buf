@@ -59,6 +59,14 @@ use crate::{
 /// let (s1, s2) = rb.as_slices_len(1, 4);
 /// assert_eq!(s1, &[2, 3, 4]);
 /// assert_eq!(s2, &[1]);
+///
+/// # #[cfg(feature = "interpolation")] {
+/// // Linear interpolation is also provided (requires the
+/// // `interpolation` feature which requires the standard
+/// // library.)
+/// let rb = BitMaskRB::<f32>::from_vec(vec![0.0, 2.0, 4.0, 6.0]);
+/// assert!((rb.lin_interp(-1.75) - 4.5).abs() <= f32::EPSILON);
+/// # }
 /// ```
 pub struct BitMaskRB<T> {
     vec: Vec<T>,

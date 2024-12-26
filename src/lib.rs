@@ -7,7 +7,7 @@
 //!
 //! This crate has no consumer/producer logic, and is meant to be used for DSP or as
 //! a base for other data structures.
-//! 
+//!
 //! This crate can also be used without the standard library (`#![no_std]`).
 //!
 //! ## Example
@@ -62,11 +62,19 @@
 //! assert_eq!(rb_ref[1], 1);
 //! assert_eq!(rb_ref[2], 2);
 //! assert_eq!(rb_ref[3], 3);
+//!
+//! # #[cfg(feature = "interpolation")] {
+//! // Linear interpolation is also provided (requires the
+//! // `interpolation` feature which requires the standard
+//! // library.)
+//! let rb = BitMaskRB::<f32>::from_vec(vec![0.0, 2.0, 4.0, 6.0]);
+//! assert!((rb.lin_interp(-1.75) - 4.5).abs() <= f32::EPSILON);
+//! # }
 //! ```
 //!
 //! [`slice_ring_buf`]: https://crates.io/crates/slice_ring_buf
 
-#![no_std]
+#![cfg_attr(not(feature = "interpolation"), no_std)]
 
 #[cfg(feature = "alloc")]
 extern crate alloc;
@@ -80,6 +88,9 @@ pub use referenced::{BitMaskRbRef, BitMaskRbRefMut};
 mod owned;
 #[cfg(feature = "alloc")]
 pub use owned::BitMaskRB;
+
+#[cfg(feature = "interpolation")]
+mod interpolation;
 
 /// Returns the next highest power of 2 if `n` is not already a power of 2.
 /// This will return `2` if `n < 2`.

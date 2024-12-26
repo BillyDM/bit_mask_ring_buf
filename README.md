@@ -65,6 +65,12 @@ assert_eq!(rb_ref[0], 5);
 assert_eq!(rb_ref[1], 1);
 assert_eq!(rb_ref[2], 2);
 assert_eq!(rb_ref[3], 3);
+
+// Linear interpolation is also provided (requires the
+// `interpolation` feature which requires the standard
+// library.)
+let rb = BitMaskRB::<f32>::from_vec(vec![0.0, 2.0, 4.0, 6.0]);
+assert!((rb.lin_interp(-1.75) - 4.5).abs() <= f32::EPSILON);
 ```
 
 [documentation]: https://docs.rs/bit_mask_ring_buf/
